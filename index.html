@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Планувальник меню</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            transition: margin-left 0.3s;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #333;
+            color: white;
+            height: 100vh;
+            padding: 20px;
+            position: fixed;
+            transition: width 0.3s;
+        }
+        .sidebar.collapsed {
+            width: 60px;
+        }
+        .sidebar h2 {
+            margin: 0 0 20px;
+            font-size: 1.2em;
+            display: block;
+        }
+        .sidebar.collapsed h2 {
+            display: none;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .sidebar a:hover {
+            background-color: #555;
+        }
+        .sidebar a span {
+            margin-left: 10px;
+            display: inline;
+        }
+        .sidebar.collapsed a span {
+            display: none;
+        }
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            text-align: left;
+        }
+        .content {
+            margin-left: 220px;
+            padding: 20px;
+            max-width: 900px;
+            flex: 1;
+            transition: margin-left 0.3s;
+        }
+        .content.collapsed {
+            margin-left: 80px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        select, button {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .menu, .shopping-list {
+            margin-top: 10px;
+        }
+        .menu-day, .shopping-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .menu-day {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .menu-day strong {
+            flex: 0 0 100px;
+        }
+        .menu-day select {
+            flex: 1;
+            min-width: 150px;
+            max-width: 200px;
+        }
+        .error {
+            color: red;
+            display: none;
+        }
+        .total-cost {
+            font-weight: bold;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+        <h2>Меню</h2>
+        <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
+        <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
+        <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
+    </div>
+    <div class="content" id="content">
+        <h1>Планувальник меню на тиждень</h1>
+
+        <div class="section">
+            <h2>Сформувати меню</h2>
+            <div id="menu">
+                <div class="menu-day" data-day="Понеділок">
+                    <strong>Понеділок:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+                <div class="menu-day" data-day="Вівторок">
+                    <strong>Вівторок:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+                <div class="menu-day" data-day="Середа">
+                    <strong>Середа:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+                <div class="menu-day" data-day="Четвер">
+                    <strong>Четвер:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+                <div class="menu-day" data-day="П'ятниця">
+                    <strong>П'ятниця:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+                <div class="menu-day" data-day="Субота">
+                    <strong>Субота:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+                <div class="menu-day" data-day="Неділя">
+                    <strong>Неділя:</strong>
+                    <select class="menu-dish breakfast">
+                        <option value="">Сніданок</option>
+                    </select>
+                    <select class="menu-dish lunch">
+                        <option value="">Обід</option>
+                    </select>
+                    <select class="menu-dish dinner">
+                        <option value="">Вечеря</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="generateShoppingList()">Сформувати список покупок</button>
+            <p id="menuError" class="error">Введіть коректні назви страв!</p>
+        </div>
+
+        <div class="section">
+            <h2>Список покупок</h2>
+            <div id="shoppingList" class="shopping-list"></div>
+            <div id="totalCost" class="total-cost"></div>
+        </div>
+    </div>
+
+    <script>
+        let dishes = JSON.parse(localStorage.getItem('dishes')) || [];
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+
+        function updateMenuOptions() {
+            const selectElements = document.querySelectorAll('.menu-dish');
+            selectElements.forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = `<option value="">${select.options[0].text}</option>`;
+                dishes.forEach(dish => {
+                    const option = document.createElement('option');
+                    option.value = dish.name;
+                    option.textContent = dish.name;
+                    select.appendChild(option);
+                });
+                select.value = currentValue;
+            });
+        }
+
+        function generateShoppingList() {
+            const menuDishes = Array.from(document.getElementsByClassName('menu-dish')).map(select => select.value.trim());
+            const shoppingList = {};
+            let totalCost = 0;
+            let valid = true;
+
+            menuDishes.forEach((dishName, index) => {
+                if (!dishName) return;
+                const dish = dishes.find(d => d.name.toLowerCase() === dishName.toLowerCase());
+                if (!dish) {
+                    valid = false;
+                    return;
+                }
+                dish.ingredients.forEach(ing => {
+                    const key = `${ing.name}_кг`;
+                    if (!shoppingList[key]) {
+                        shoppingList[key] = { name: ing.name, quantity: 0, unit: 'кг', price: ing.price, totalCost: 0 };
+                    }
+                    shoppingList[key].quantity += ing.quantity;
+                    if (ing.price) {
+                        shoppingList[key].totalCost = shoppingList[key].quantity * ing.price;
+                        totalCost += shoppingList[key].totalCost;
+                    }
+                });
+            });
+
+            if (!valid) {
+                document.getElementById('menuError').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('menuError').style.display = 'none';
+            const shoppingListDiv = document.getElementById('shoppingList');
+            shoppingListDiv.innerHTML = '';
+            Object.values(shoppingList).forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shopping-item';
+                itemDiv.textContent = `${item.name}: ${item.quantity} кг${item.price ? `, загальна вартість: ${item.totalCost.toFixed(2)} грн` : ''}`;
+                shoppingListDiv.appendChild(itemDiv);
+            });
+
+            const totalCostDiv = document.getElementById('totalCost');
+            totalCostDiv.textContent = totalCost > 0 ? `Загальна вартість: ${totalCost.toFixed(2)} грн` : 'Загальна вартість не розрахована (відсутні ціни)';
+        }
+
+        window.onload = () => {
+            updateMenuOptions();
+        };
+    </script>
+</body>
+</html>

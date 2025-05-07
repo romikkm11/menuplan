@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список страв</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            transition: margin-left 0.3s;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #333;
+            color: white;
+            height: 100vh;
+            padding: 20px;
+            position: fixed;
+            transition: width 0.3s;
+        }
+        .sidebar.collapsed {
+            width: 60px;
+        }
+        .sidebar h2 {
+            margin: 0 0 20px;
+            font-size: 1.2em;
+            display: block;
+        }
+        .sidebar.collapsed h2 {
+            display: none;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .sidebar a:hover {
+            background-color: #555;
+        }
+        .sidebar a span {
+            margin-left: 10px;
+            display: inline;
+        }
+        .sidebar.collapsed a span {
+            display: none;
+        }
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            text-align: left;
+        }
+        .content {
+            margin-left: 220px;
+            padding: 20px;
+            max-width: 900px;
+            flex: 1;
+            transition: margin-left 0.3s;
+        }
+        .content.collapsed {
+            margin-left: 80px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .dish-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dish-form {
+            margin-top: 10px;
+        }
+        .ingredient {
+            margin-left: 20px;
+            display: flex;
+            align-items: center;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        select {
+            min-width: 150px;
+        }
+        .action-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .action-btn.delete {
+            background-color: #dc3545;
+        }
+        .action-btn:hover {
+            background-color: #0056b3;
+        }
+        .action-btn.delete:hover {
+            background-color: #c82333;
+        }
+        .error {
+            color: red;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+        <h2>Меню</h2>
+        <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
+        <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
+        <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
+    </div>
+    <div class="content" id="content">
+        <h1>Список страв</h1>
+        <div class="section">
+            <h2>Додати страву</h2>
+            <button onclick="createDishForm()">Додати нову страву</button>
+            <div id="dishForms" class="dish-form"></div>
+            <p id="dishError" class="error">Заповніть усі обов’язкові поля!</p>
+        </div>
+        <div class="section">
+            <h2>Усі страви</h2>
+            <div id="dishList" class="dish-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let dishes = JSON.parse(localStorage.getItem('dishes')) || [];
+        let ingredients = JSON.parse(localStorage.getItem('ingredients')) || [];
+        let editingIndex = null;
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+
+        function createDishForm(index = null) {
+            if (ingredients.length === 0) {
+                document.getElementById('dishError').textContent = 'Додайте хоча б один інгредієнт на сторінці інгредієнтів!';
+                document.getElementById('dishError').style.display = 'block';
+                return;
+            }
+            const dishForms = document.getElementById('dishForms');
+            const formId = Date.now();
+            const dish = index !== null ? dishes[index] : { name: '', ingredients: [] };
+            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
+            const dishForm = document.createElement('div');
+            dishForm.className = 'dish-form';
+            dishForm.innerHTML = `
+                <input type="text" id="dishName_${formId}" placeholder="Назва страви" value="${dish.name}">
+                <div id="ingredients_${formId}">
+                    ${dish.ingredients.map((ing, i) => `
+                        <div class="ingredient" id="ingredient_${formId}_${i}">
+                            <select class="ingredient-name" onchange="updatePrice(${formId}, ${i})">
+                                <option value="">Виберіть інгредієнт</option>
+                                ${sortedIngredients.map(ingOption => `<option value="${ingOption.name}" ${ing.name === ingOption.name ? 'selected' : ''}>${ingOption.name}</option>`).join('')}
+                            </select>
+                            <input type="number" class="ingredient-quantity" placeholder="Кількість (кг)" min="0" step="0.01" value="${ing.quantity}">
+                            <input type="number" class="ingredient-price" placeholder="Ціна за кг (необов’язково)" min="0" step="0.01" value="${ing.price || ''}">
+                            <button class="action-btn delete" onclick="removeIngredient(${formId}, ${i})">Видалити</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="addIngredientField(${formId})">Додати інгредієнт</button>
+                <button onclick="saveDish(${formId}, ${index})">${index !== null ? 'Зберегти зміни' : 'Зберегти страву'}</button>
+                ${index !== null ? `<button onclick="cancelEdit()">Скасувати</button>` : ''}
+            `;
+            dishForms.innerHTML = '';
+            dishForms.appendChild(dishForm);
+            editingIndex = index;
+        }
+
+        function addIngredientField(formId) {
+            const ingredientsDiv = document.getElementById(`ingredients_${formId}`);
+            const ingredientId = ingredientsDiv.children.length;
+            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
+            const ingredient = document.createElement('div');
+            ingredient.className = 'ingredient';
+            ingredient.id = `ingredient_${formId}_${ingredientId}`;
+            ingredient.innerHTML = `
+                <select class="ingredient-name" onchange="updatePrice(${formId}, ${ingredientId})">
+                    <option value="">Виберіть інгредієнт</option>
+                    ${sortedIngredients.map(ing => `<option value="${ing.name}">${ing.name}</option>`).join('')}
+                </select>
+                <input type="number" class="ingredient-quantity" placeholder="Кількість (кг)" min="0" step="0.01">
+                <input type="number" class="ingredient-price" placeholder="Ціна за кг (необов’язково)" min="0" step="0.01">
+                <button class="action-btn delete" onclick="removeIngredient(${formId}, ${ingredientId})">Видалити</button>
+            `;
+            ingredientsDiv.appendChild(ingredient);
+        }
+
+        function updatePrice(formId, ingredientId) {
+            const ingredientDiv = document.getElementById(`ingredient_${formId}_${ingredientId}`);
+            const select = ingredientDiv.querySelector('.ingredient-name');
+            const priceInput = ingredientDiv.querySelector('.ingredient-price');
+            const selectedIngredient = ingredients.find(ing => ing.name === select.value);
+            priceInput.value = selectedIngredient && selectedIngredient.price ? selectedIngredient.price : '';
+        }
+
+        function removeIngredient(formId, ingredientId) {
+            const ingredientDiv = document.getElementById(`ingredient_${formId}_${ingredientId}`);
+            ingredientDiv.remove();
+        }
+
+        function saveDish(formId, index) {
+            const dishName = document.getElementById(`dishName_${formId}`).value.trim();
+            const ingredientDivs = document.getElementById(`ingredients_${formId}`).getElementsByClassName('ingredient');
+            const ingredientsData = Array.from(ingredientDivs).map(ing => {
+                const select = ing.querySelector('.ingredient-name');
+                const name = select.value;
+                return {
+                    name,
+                    quantity: parseFloat(ing.querySelector('.ingredient-quantity').value) || 0,
+                    unit: 'кг',
+                    price: parseFloat(ing.querySelector('.ingredient-price').value) || 0
+                };
+            });
+
+            if (!dishName || ingredientsData.length === 0 || ingredientsData.some(ing => !ing.name || !ing.quantity)) {
+                document.getElementById('dishError').textContent = 'Заповніть усі обов’язкові поля (назва страви та хоча б один інгредієнт)!';
+                document.getElementById('dishError').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('dishError').style.display = 'none';
+            if (index !== null) {
+                dishes[index] = { name: dishName, ingredients: ingredientsData };
+            } else {
+                dishes.push({ name: dishName, ingredients: ingredientsData });
+            }
+            localStorage.setItem('dishes', JSON.stringify(dishes));
+            document.getElementById('dishForms').innerHTML = '';
+            editingIndex = null;
+            renderDishList();
+        }
+
+        function cancelEdit() {
+            document.getElementById('dishForms').innerHTML = '';
+            editingIndex = null;
+        }
+
+        function deleteDish(index) {
+            if (confirm('Ви впевнені, що хочете видалити цю страву?')) {
+                dishes.splice(index, 1);
+                localStorage.setItem('dishes', JSON.stringify(dishes));
+                renderDishList();
+            }
+        }
+
+        function renderDishList() {
+            const dishList = document.getElementById('dishList');
+            dishList.innerHTML = '';
+            dishes.forEach((dish, index) => {
+                const dishItem = document.createElement('div');
+                dishItem.className = 'dish-item';
+                dishItem.innerHTML = `
+                    <div>
+                        <strong>${dish.name}</strong><br>
+                        ${dish.ingredients.map(ing => `${ing.name}: ${ing.quantity} кг${ing.price ? `, ціна: ${ing.price} грн/кг` : ''}`).join('<br>')}
+                    </div>
+                    <div>
+                        <button class="action-btn" onclick="createDishForm(${index})">Редагувати</button>
+                        <button class="action-btn delete" onclick="deleteDish(${index})">Видалити</button>
+                    </div>
+                `;
+                dishList.appendChild(dishItem);
+            });
+        }
+
+        window.onload = renderDishList;
+    </script>
+</body>
+</html>
