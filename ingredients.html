@@ -5,128 +5,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Список інгредієнтів</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background-color: #f4f4f4;
-            display: flex;
-            transition: margin-left 0.3s;
-        }
-        .sidebar {
-            width: 200px;
-            background-color: #333;
-            color: white;
-            height: 100vh;
-            padding: 20px;
-            position: fixed;
-            transition: width 0.3s;
-        }
-        .sidebar.collapsed {
-            width: 60px;
-        }
-        .sidebar h2 {
-            margin: 0 0 20px;
-            font-size: 1.2em;
-            display: block;
-        }
-        .sidebar.collapsed h2 {
-            display: none;
-        }
-        .sidebar a {
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-        .sidebar a:hover {
-            background-color: #555;
-        }
-        .sidebar a span {
-            margin-left: 10px;
-            display: inline;
-        }
-        .sidebar.collapsed a span {
-            display: none;
-        }
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2em;
-            cursor: pointer;
-            padding: 10px;
-            width: 100%;
-            text-align: left;
-        }
-        .content {
-            margin-left: 220px;
-            padding: 20px;
-            max-width: 900px;
-            flex: 1;
-            transition: margin-left 0.3s;
-        }
-        .content.collapsed {
-            margin-left: 80px;
-        }
-        h1, h2 {
-            color: #333;
-        }
-        .section {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .ingredient-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .ingredient-form {
-            margin-top: 10px;
-        }
-        input, button {
-            padding: 8px;
-            margin: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #218838;
-        }
-        .action-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-left: 5px;
-        }
-        .action-btn.delete {
-            background-color: #dc3545;
-        }
-        .action-btn:hover {
-            background-color: #0056b3;
-        }
-        .action-btn.delete:hover {
-            background-color: #c82333;
-        }
-        .error {
-            color: red;
-            display: none;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; display: flex; transition: margin-left 0.3s; }
+        .sidebar { width: 200px; background-color: #333; color: white; height: 100vh; padding: 20px; position: fixed; transition: width 0.3s; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar h2 { margin: 0 0 20px; font-size: 1.2em; display: block; }
+        .sidebar.collapsed h2 { display: none; }
+        .sidebar a { color: white; text-decoration: none; display: flex; align-items: center; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .sidebar a:hover { background-color: #555; }
+        .sidebar a span { margin-left: 10px; display: inline; }
+        .sidebar.collapsed a span { display: none; }
+        .toggle-btn { background: none; border: none; color: white; font-size: 1.2em; cursor: pointer; padding: 10px; width: 100%; text-align: left; }
+        .content { margin-left: 220px; padding: 20px; max-width: 900px; flex: 1; transition: margin-left 0.3s; }
+        .content.collapsed { margin-left: 80px; }
+        h1, h2 { color: #333; }
+        .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .ingredient-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .ingredient-form { margin-top: 10px; }
+        input, button { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        .action-btn { background-color: #007bff; color: white; border: none; cursor: pointer; margin-left: 5px; }
+        .action-btn.delete { background-color: #dc3545; }
+        .action-btn:hover { background-color: #0056b3; }
+        .action-btn.delete:hover { background-color: #c82333; }
+        .error { color: red; display: none; }
     </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCq8HRJchKgy7w97JzKPWar37YbiDMt94o",
+            authDomain: "menu-data-4bb71.firebaseapp.com",
+            projectId: "menu-data-4bb71",
+            storageBucket: "menu-data-4bb71.firebasestorage.app",
+            messagingSenderId: "1055556497638",
+            appId: "1:1055556497638:web:fde8fc971af723b755cb27"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let ingredients = [];
+        let ingredientsDocs = [];
+        let dishes = [];
+        let editingIndex = null;
+
+        async function loadData() {
+            const ingredientsSnap = await getDocs(collection(db, "ingredients"));
+            ingredients = ingredientsSnap.docs.map(doc => doc.data());
+            ingredientsDocs = ingredientsSnap.docs.map(doc => doc.id);
+
+            const dishesSnap = await getDocs(collection(db, "dishes"));
+            dishes = dishesSnap.docs.map(doc => doc.data());
+
+            renderIngredientList();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+
+        window.saveIngredient = async function() {
+            const name = document.getElementById('ingredientName').value.trim();
+            const price = parseFloat(document.getElementById('ingredientPrice').value) || 0;
+
+            if (!name) {
+                document.getElementById('ingredientError').textContent = 'Введіть назву інгредієнта!';
+                document.getElementById('ingredientError').style.display = 'block';
+                return;
+            }
+
+            // Перевірка на унікальність
+            if (
+                (editingIndex !== null && ingredients.some((ing, i) => ing.name === name && i !== editingIndex)) ||
+                (editingIndex === null && ingredients.some(ing => ing.name === name))
+            ) {
+                document.getElementById('ingredientError').textContent = 'Інгредієнт з такою назвою вже існує!';
+                document.getElementById('ingredientError').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('ingredientError').style.display = 'none';
+
+            if (editingIndex !== null) {
+                const ingId = ingredientsDocs[editingIndex];
+                await setDoc(doc(db, "ingredients", ingId), { name, price });
+            } else {
+                await addDoc(collection(db, "ingredients"), { name, price });
+            }
+            document.getElementById('ingredientName').value = '';
+            document.getElementById('ingredientPrice').value = '';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            editingIndex = null;
+            await loadData();
+        }
+
+        window.editIngredient = function(index) {
+            const ingredient = ingredients[index];
+            document.getElementById('ingredientName').value = ingredient.name;
+            document.getElementById('ingredientPrice').value = ingredient.price || '';
+            document.getElementById('cancelEditBtn').style.display = 'inline';
+            editingIndex = index;
+        }
+
+        window.cancelEdit = function() {
+            document.getElementById('ingredientName').value = '';
+            document.getElementById('ingredientPrice').value = '';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            editingIndex = null;
+            document.getElementById('ingredientError').style.display = 'none';
+        }
+
+        window.deleteIngredient = async function(index) {
+            const ingredientName = ingredients[index].name;
+            const isUsed = dishes.some(dish => dish.ingredients.some(ing => ing.name === ingredientName));
+            if (isUsed) {
+                alert('Цей інгредієнт використовується в одній або кількох стравах. Видаліть або відредагуйте страви, щоб видалити цей інгредієнт.');
+                return;
+            }
+            if (confirm('Ви впевнені, що хочете видалити цей інгредієнт?')) {
+                const ingId = ingredientsDocs[index];
+                await deleteDoc(doc(db, "ingredients", ingId));
+                await loadData();
+            }
+        }
+
+        function renderIngredientList() {
+            const ingredientList = document.getElementById('ingredientList');
+            ingredientList.innerHTML = '';
+            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
+            sortedIngredients.forEach((ing, index) => {
+                const realIndex = ingredients.findIndex(i => i.name === ing.name);
+                const item = document.createElement('div');
+                item.className = 'ingredient-item';
+                item.innerHTML = `
+                    <div>${ing.name}${ing.price ? `, ціна: ${ing.price} грн/кг` : ''}</div>
+                    <div>
+                        <button class="action-btn" onclick="editIngredient(${realIndex})">Редагувати</button>
+                        <button class="action-btn delete" onclick="deleteIngredient(${realIndex})">Видалити</button>
+                    </div>
+                `;
+                ingredientList.appendChild(item);
+            });
+        }
+
+        window.onload = loadData;
+    </script>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
@@ -153,106 +180,5 @@
             <div id="ingredientList" class="ingredient-list"></div>
         </div>
     </div>
-
-    <script>
-        let ingredients = JSON.parse(localStorage.getItem('ingredients')) || [];
-        let dishes = JSON.parse(localStorage.getItem('dishes')) || [];
-        let editingIndex = null;
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.getElementById('content');
-            sidebar.classList.toggle('collapsed');
-            content.classList.toggle('collapsed');
-        }
-
-        function saveIngredient() {
-            const name = document.getElementById('ingredientName').value.trim();
-            const price = parseFloat(document.getElementById('ingredientPrice').value) || 0;
-
-            if (!name) {
-                document.getElementById('ingredientError').textContent = 'Введіть назву інгредієнта!';
-                document.getElementById('ingredientError').style.display = 'block';
-                return;
-            }
-
-            if (editingIndex !== null && ingredients.some((ing, i) => ing.name === name && i !== editingIndex)) {
-                document.getElementById('ingredientError').textContent = 'Інгредієнт з такою назвою вже існує!';
-                document.getElementById('ingredientError').style.display = 'block';
-                return;
-            }
-
-            if (editingIndex === null && ingredients.some(ing => ing.name === name)) {
-                document.getElementById('ingredientError').textContent = 'Інгредієнт з такою назвою вже існує!';
-                document.getElementById('ingredientError').style.display = 'block';
-                return;
-            }
-
-            document.getElementById('ingredientError').style.display = 'none';
-            if (editingIndex !== null) {
-                ingredients[editingIndex] = { name, price };
-            } else {
-                ingredients.push({ name, price });
-            }
-            ingredients.sort((a, b) => a.name.localeCompare(b.name));
-            localStorage.setItem('ingredients', JSON.stringify(ingredients));
-            document.getElementById('ingredientName').value = '';
-            document.getElementById('ingredientPrice').value = '';
-            document.getElementById('cancelEditBtn').style.display = 'none';
-            editingIndex = null;
-            renderIngredientList();
-        }
-
-        function editIngredient(index) {
-            const ingredient = ingredients[index];
-            document.getElementById('ingredientName').value = ingredient.name;
-            document.getElementById('ingredientPrice').value = ingredient.price || '';
-            document.getElementById('cancelEditBtn').style.display = 'inline';
-            editingIndex = index;
-        }
-
-        function cancelEdit() {
-            document.getElementById('ingredientName').value = '';
-            document.getElementById('ingredientPrice').value = '';
-            document.getElementById('cancelEditBtn').style.display = 'none';
-            editingIndex = null;
-            document.getElementById('ingredientError').style.display = 'none';
-        }
-
-        function deleteIngredient(index) {
-            const ingredientName = ingredients[index].name;
-            const isUsed = dishes.some(dish => dish.ingredients.some(ing => ing.name === ingredientName));
-            if (isUsed) {
-                alert('Цей інгредієнт використовується в одній або кількох стравах. Видаліть або відредагуйте страви, щоб видалити цей інгредієнт.');
-                return;
-            }
-            if (confirm('Ви впевнені, що хочете видалити цей інгредієнт?')) {
-                ingredients.splice(index, 1);
-                ingredients.sort((a, b) => a.name.localeCompare(b.name));
-                localStorage.setItem('ingredients', JSON.stringify(ingredients));
-                renderIngredientList();
-            }
-        }
-
-        function renderIngredientList() {
-            const ingredientList = document.getElementById('ingredientList');
-            ingredientList.innerHTML = '';
-            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
-            sortedIngredients.forEach((ing, index) => {
-                const item = document.createElement('div');
-                item.className = 'ingredient-item';
-                item.innerHTML = `
-                    <div>${ing.name}${ing.price ? `, ціна: ${ing.price} грн/кг` : ''}</div>
-                    <div>
-                        <button class="action-btn" onclick="editIngredient(${index})">Редагувати</button>
-                        <button class="action-btn delete" onclick="deleteIngredient(${index})">Видалити</button>
-                    </div>
-                `;
-                ingredientList.appendChild(item);
-            });
-        }
-
-        window.onload = renderIngredientList;
-    </script>
 </body>
 </html>
