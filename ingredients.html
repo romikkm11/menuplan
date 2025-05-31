@@ -29,10 +29,14 @@
         .action-btn:hover { background-color: #0056b3; }
         .action-btn.delete:hover { background-color: #c82333; }
         .error { color: red; display: none; }
+        .auth-btn { background-color: #007bff; }
+        .auth-btn:hover { background-color: #0056b3; }
+        .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCq8HRJchKgy7w97JzKPWar37YbiDMt94o",
@@ -44,7 +48,34 @@
         };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
+        // --- АВТЕНТИФІКАЦІЯ через email/пароль ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                document.getElementById('authBlock').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline';
+            } else {
+                document.getElementById('authBlock').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+        });
+
+        window.login = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (e) {
+                alert('Невірний email або пароль');
+            }
+        };
+
+        window.logout = async function() {
+            await signOut(auth);
+        };
+
+        // --- ОСНОВНИЙ КОД ---
         let ingredients = [];
         let ingredientsDocs = [];
         let dishes = [];
@@ -59,13 +90,6 @@
             dishes = dishesSnap.docs.map(doc => doc.data());
 
             renderIngredientList();
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.getElementById('content');
-            sidebar.classList.toggle('collapsed');
-            content.classList.toggle('collapsed');
         }
 
         window.saveIngredient = async function() {
@@ -162,6 +186,14 @@
         <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
         <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
         <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
+        <div style="margin-top:20px;">
+            <div id="authBlock" class="auth-form">
+                <input id="email" type="email" placeholder="Email">
+                <input id="password" type="password" placeholder="Пароль">
+                <button id="loginBtn" class="auth-btn" onclick="login()">Увійти</button>
+            </div>
+            <button id="logoutBtn" class="auth-btn" onclick="logout()" style="display:none;">Вийти</button>
+        </div>
     </div>
     <div class="content" id="content">
         <h1>Список інгредієнтів</h1>

@@ -3,133 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Список страв</title>
+    <title>Страви</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background-color: #f4f4f4;
-            display: flex;
-            transition: margin-left 0.3s;
-        }
-        .sidebar {
-            width: 200px;
-            background-color: #333;
-            color: white;
-            height: 100vh;
-            padding: 20px;
-            position: fixed;
-            transition: width 0.3s;
-        }
-        .sidebar.collapsed {
-            width: 60px;
-        }
-        .sidebar h2 {
-            margin: 0 0 20px;
-            font-size: 1.2em;
-            display: block;
-        }
-        .sidebar.collapsed h2 {
-            display: none;
-        }
-        .sidebar a {
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-        .sidebar a:hover {
-            background-color: #555;
-        }
-        .sidebar a span {
-            margin-left: 10px;
-            display: inline;
-        }
-        .sidebar.collapsed a span {
-            display: none;
-        }
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2em;
-            cursor: pointer;
-            padding: 10px;
-            width: 100%;
-            text-align: left;
-        }
-        .content {
-            margin-left: 220px;
-            padding: 20px;
-            max-width: 900px;
-            flex: 1;
-            transition: margin-left 0.3s;
-        }
-        .content.collapsed {
-            margin-left: 80px;
-        }
-        h1, h2 {
-            color: #333;
-        }
-        .section {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .dish-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .dish-form {
-            margin-top: 10px;
-        }
-        .ingredient {
-            margin-left: 20px;
-            display: flex;
-            align-items: center;
-        }
-        input, select, button {
-            padding: 8px;
-            margin: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        select {
-            min-width: 150px;
-        }
-        .action-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-left: 5px;
-        }
-        .action-btn.delete {
-            background-color: #dc3545;
-        }
-        .action-btn:hover {
-            background-color: #0056b3;
-        }
-        .action-btn.delete:hover {
-            background-color: #c82333;
-        }
-        .error {
-            color: red;
-            display: none;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; display: flex; transition: margin-left 0.3s; }
+        .sidebar { width: 200px; background-color: #333; color: white; height: 100vh; padding: 20px; position: fixed; transition: width 0.3s; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar h2 { margin: 0 0 20px; font-size: 1.2em; display: block; }
+        .sidebar.collapsed h2 { display: none; }
+        .sidebar a { color: white; text-decoration: none; display: flex; align-items: center; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .sidebar a:hover { background-color: #555; }
+        .sidebar a span { margin-left: 10px; display: inline; }
+        .sidebar.collapsed a span { display: none; }
+        .toggle-btn { background: none; border: none; color: white; font-size: 1.2em; cursor: pointer; padding: 10px; width: 100%; text-align: left; }
+        .content { margin-left: 220px; padding: 20px; max-width: 900px; flex: 1; transition: margin-left 0.3s; }
+        .content.collapsed { margin-left: 80px; }
+        h1, h2 { color: #333; }
+        .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .dish-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .dish-form { margin-top: 10px; }
+        input, button, textarea { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        .action-btn { background-color: #007bff; color: white; border: none; cursor: pointer; margin-left: 5px; }
+        .action-btn.delete { background-color: #dc3545; }
+        .action-btn:hover { background-color: #0056b3; }
+        .action-btn.delete:hover { background-color: #c82333; }
+        .error { color: red; display: none; }
+        .auth-btn { background-color: #007bff; }
+        .auth-btn:hover { background-color: #0056b3; }
+        .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
     </style>
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, setDoc, doc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCq8HRJchKgy7w97JzKPWar37YbiDMt94o",
@@ -141,136 +48,89 @@
         };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
+        // --- АВТЕНТИФІКАЦІЯ через email/пароль ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                document.getElementById('authBlock').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline';
+            } else {
+                document.getElementById('authBlock').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+        });
+
+        window.login = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (e) {
+                alert('Невірний email або пароль');
+            }
+        };
+
+        window.logout = async function() {
+            await signOut(auth);
+        };
+
+        // --- ОСНОВНИЙ КОД ---
         let dishes = [];
-        let ingredients = [];
+        let dishesDocs = [];
         let editingIndex = null;
-        let dishesDocs = []; // Для зберігання id документів страв
 
         async function loadData() {
-            // Завантаження інгредієнтів
-            const ingredientsSnap = await getDocs(collection(db, "ingredients"));
-            ingredients = ingredientsSnap.docs.map(doc => doc.data());
-
-            // Завантаження страв
             const dishesSnap = await getDocs(collection(db, "dishes"));
             dishes = dishesSnap.docs.map(doc => doc.data());
             dishesDocs = dishesSnap.docs.map(doc => doc.id);
             renderDishList();
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const content = document.getElementById('content');
-            sidebar.classList.toggle('collapsed');
-            content.classList.toggle('collapsed');
-        }
-
-        window.createDishForm = function(index = null) {
-            if (ingredients.length === 0) {
-                document.getElementById('dishError').textContent = 'Додайте хоча б один інгредієнт на сторінці інгредієнтів!';
+        window.saveDish = async function() {
+            const name = document.getElementById('dishName').value.trim();
+            let ingredients;
+            try {
+                ingredients = JSON.parse(document.getElementById('dishIngredients').value);
+            } catch {
+                document.getElementById('dishError').textContent = 'Некоректний формат інгредієнтів!';
                 document.getElementById('dishError').style.display = 'block';
                 return;
             }
-            const dishForms = document.getElementById('dishForms');
-            const formId = Date.now();
-            const dish = index !== null ? dishes[index] : { name: '', ingredients: [] };
-            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
-            const dishForm = document.createElement('div');
-            dishForm.className = 'dish-form';
-            dishForm.innerHTML = `
-                <input type="text" id="dishName_${formId}" placeholder="Назва страви" value="${dish.name}">
-                <div id="ingredients_${formId}">
-                    ${dish.ingredients.map((ing, i) => `
-                        <div class="ingredient" id="ingredient_${formId}_${i}">
-                            <select class="ingredient-name" onchange="updatePrice(${formId}, ${i})">
-                                <option value="">Виберіть інгредієнт</option>
-                                ${sortedIngredients.map(ingOption => `<option value="${ingOption.name}" ${ing.name === ingOption.name ? 'selected' : ''}>${ingOption.name}</option>`).join('')}
-                            </select>
-                            <input type="number" class="ingredient-quantity" placeholder="Кількість (кг)" min="0" step="0.01" value="${ing.quantity}">
-                            <input type="number" class="ingredient-price" placeholder="Ціна за кг (необов’язково)" min="0" step="0.01" value="${ing.price || ''}">
-                            <button class="action-btn delete" onclick="removeIngredient(${formId}, ${i})">Видалити</button>
-                        </div>
-                    `).join('')}
-                </div>
-                <button onclick="addIngredientField(${formId})">Додати інгредієнт</button>
-                <button onclick="saveDish(${formId}, ${index})">${index !== null ? 'Зберегти зміни' : 'Зберегти страву'}</button>
-                ${index !== null ? `<button onclick="cancelEdit()">Скасувати</button>` : ''}
-            `;
-            dishForms.innerHTML = '';
-            dishForms.appendChild(dishForm);
-            editingIndex = index;
-        }
-
-        window.addIngredientField = function(formId) {
-            const ingredientsDiv = document.getElementById(`ingredients_${formId}`);
-            const ingredientId = ingredientsDiv.children.length;
-            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
-            const ingredient = document.createElement('div');
-            ingredient.className = 'ingredient';
-            ingredient.id = `ingredient_${formId}_${ingredientId}`;
-            ingredient.innerHTML = `
-                <select class="ingredient-name" onchange="updatePrice(${formId}, ${ingredientId})">
-                    <option value="">Виберіть інгредієнт</option>
-                    ${sortedIngredients.map(ing => `<option value="${ing.name}">${ing.name}</option>`).join('')}
-                </select>
-                <input type="number" class="ingredient-quantity" placeholder="Кількість (кг)" min="0" step="0.01">
-                <input type="number" class="ingredient-price" placeholder="Ціна за кг (необов’язково)" min="0" step="0.01">
-                <button class="action-btn delete" onclick="removeIngredient(${formId}, ${ingredientId})">Видалити</button>
-            `;
-            ingredientsDiv.appendChild(ingredient);
-        }
-
-        window.updatePrice = function(formId, ingredientId) {
-            const ingredientDiv = document.getElementById(`ingredient_${formId}_${ingredientId}`);
-            const select = ingredientDiv.querySelector('.ingredient-name');
-            const priceInput = ingredientDiv.querySelector('.ingredient-price');
-            const selectedIngredient = ingredients.find(ing => ing.name === select.value);
-            priceInput.value = selectedIngredient && selectedIngredient.price ? selectedIngredient.price : '';
-        }
-
-        window.removeIngredient = function(formId, ingredientId) {
-            const ingredientDiv = document.getElementById(`ingredient_${formId}_${ingredientId}`);
-            ingredientDiv.remove();
-        }
-
-        window.saveDish = async function(formId, index) {
-            const dishName = document.getElementById(`dishName_${formId}`).value.trim();
-            const ingredientDivs = document.getElementById(`ingredients_${formId}`).getElementsByClassName('ingredient');
-            const ingredientsData = Array.from(ingredientDivs).map(ing => {
-                const select = ing.querySelector('.ingredient-name');
-                const name = select.value;
-                return {
-                    name,
-                    quantity: parseFloat(ing.querySelector('.ingredient-quantity').value) || 0,
-                    unit: 'кг',
-                    price: parseFloat(ing.querySelector('.ingredient-price').value) || 0
-                };
-            });
-
-            if (!dishName || ingredientsData.length === 0 || ingredientsData.some(ing => !ing.name || !ing.quantity)) {
-                document.getElementById('dishError').textContent = 'Заповніть усі обов’язкові поля (назва страви та хоча б один інгредієнт)!';
+            if (!name || !Array.isArray(ingredients)) {
+                document.getElementById('dishError').textContent = 'Введіть назву і коректний масив інгредієнтів!';
                 document.getElementById('dishError').style.display = 'block';
                 return;
             }
-
             document.getElementById('dishError').style.display = 'none';
 
-            // Якщо редагування, оновлюємо документ, інакше додаємо новий
-            if (index !== null) {
-                const dishId = dishesDocs[index];
-                await setDoc(doc(db, "dishes", dishId), { name: dishName, ingredients: ingredientsData });
+            if (editingIndex !== null) {
+                const dishId = dishesDocs[editingIndex];
+                await setDoc(doc(db, "dishes", dishId), { name, ingredients });
             } else {
-                await addDoc(collection(db, "dishes"), { name: dishName, ingredients: ingredientsData });
+                await addDoc(collection(db, "dishes"), { name, ingredients });
             }
-            document.getElementById('dishForms').innerHTML = '';
+            document.getElementById('dishName').value = '';
+            document.getElementById('dishIngredients').value = '';
+            document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
             await loadData();
         }
 
+        window.editDish = function(index) {
+            const dish = dishes[index];
+            document.getElementById('dishName').value = dish.name;
+            document.getElementById('dishIngredients').value = JSON.stringify(dish.ingredients, null, 2);
+            document.getElementById('cancelEditBtn').style.display = 'inline';
+            editingIndex = index;
+        }
+
         window.cancelEdit = function() {
-            document.getElementById('dishForms').innerHTML = '';
+            document.getElementById('dishName').value = '';
+            document.getElementById('dishIngredients').value = '';
+            document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
+            document.getElementById('dishError').style.display = 'none';
         }
 
         window.deleteDish = async function(index) {
@@ -284,20 +144,22 @@
         function renderDishList() {
             const dishList = document.getElementById('dishList');
             dishList.innerHTML = '';
-            dishes.forEach((dish, index) => {
-                const dishItem = document.createElement('div');
-                dishItem.className = 'dish-item';
-                dishItem.innerHTML = `
+            const sortedDishes = [...dishes].sort((a, b) => a.name.localeCompare(b.name));
+            sortedDishes.forEach((dish, index) => {
+                const realIndex = dishes.findIndex(i => i.name === dish.name);
+                const item = document.createElement('div');
+                item.className = 'dish-item';
+                item.innerHTML = `
                     <div>
-                        <strong>${dish.name}</strong><br>
-                        ${dish.ingredients.map(ing => `${ing.name}: ${ing.quantity} кг${ing.price ? `, ціна: ${ing.price} грн/кг` : ''}`).join('<br>')}
+                        <strong>${dish.name}</strong>
+                        <pre style="margin:0;font-size:0.9em;">${JSON.stringify(dish.ingredients, null, 2)}</pre>
                     </div>
                     <div>
-                        <button class="action-btn" onclick="createDishForm(${index})">Редагувати</button>
-                        <button class="action-btn delete" onclick="deleteDish(${index})">Видалити</button>
+                        <button class="action-btn" onclick="editDish(${realIndex})">Редагувати</button>
+                        <button class="action-btn delete" onclick="deleteDish(${realIndex})">Видалити</button>
                     </div>
                 `;
-                dishList.appendChild(dishItem);
+                dishList.appendChild(item);
             });
         }
 
@@ -311,14 +173,26 @@
         <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
         <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
         <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
+        <div style="margin-top:20px;">
+            <div id="authBlock" class="auth-form">
+                <input id="email" type="email" placeholder="Email">
+                <input id="password" type="password" placeholder="Пароль">
+                <button id="loginBtn" class="auth-btn" onclick="login()">Увійти</button>
+            </div>
+            <button id="logoutBtn" class="auth-btn" onclick="logout()" style="display:none;">Вийти</button>
+        </div>
     </div>
     <div class="content" id="content">
         <h1>Список страв</h1>
         <div class="section">
-            <h2>Додати страву</h2>
-            <button onclick="createDishForm()">Додати нову страву</button>
-            <div id="dishForms" class="dish-form"></div>
-            <p id="dishError" class="error">Заповніть усі обов’язкові поля!</p>
+            <h2>Додати/Редагувати страву</h2>
+            <div class="dish-form">
+                <input type="text" id="dishName" placeholder="Назва страви">
+                <textarea id="dishIngredients" placeholder='Масив інгредієнтів у форматі JSON' rows="6" style="width:98%;"></textarea>
+                <button onclick="saveDish()">Зберегти страву</button>
+                <button onclick="cancelEdit()" id="cancelEditBtn" style="display: none;">Скасувати</button>
+            </div>
+            <p id="dishError" class="error">Введіть назву і коректний масив інгредієнтів!</p>
         </div>
         <div class="section">
             <h2>Усі страви</h2>
