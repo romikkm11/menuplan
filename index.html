@@ -29,10 +29,13 @@
         .menu-day select { flex: 1; min-width: 150px; max-width: 200px; }
         .error { color: red; display: none; }
         .total-cost { font-weight: bold; padding: 10px; margin-top: 10px; background-color: #f8f9fa; border-radius: 4px; }
+        .auth-btn { background-color: #007bff; }
+        .auth-btn:hover { background-color: #0056b3; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCq8HRJchKgy7w97JzKPWar37YbiDMt94o",
@@ -44,7 +47,29 @@
         };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
+        // --- АВТЕНТИФІКАЦІЯ ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline';
+            } else {
+                document.getElementById('loginBtn').style.display = 'inline';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+        });
+
+        window.login = async function() {
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
+        };
+
+        window.logout = async function() {
+            await signOut(auth);
+        };
+
+        // --- ОСНОВНИЙ КОД ---
         let dishes = [];
         let ingredients = [];
         let menu = Array(7).fill(""); // 7 днів
@@ -133,6 +158,10 @@
         <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
         <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
         <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
+        <div style="margin-top:20px;">
+            <button id="loginBtn" class="auth-btn" onclick="login()">Увійти через Google</button>
+            <button id="logoutBtn" class="auth-btn" onclick="logout()" style="display:none;">Вийти</button>
+        </div>
     </div>
     <div class="content" id="content">
         <h1>Планувальник меню на тиждень</h1>
