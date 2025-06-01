@@ -21,7 +21,7 @@
         .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .dish-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .dish-form { margin-top: 10px; }
-        input, button, textarea { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        input, button, textarea, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
         button { background-color: #28a745; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #218838; }
         .action-btn { background-color: #007bff; color: white; border: none; cursor: pointer; margin-left: 5px; }
@@ -32,6 +32,10 @@
         .auth-btn { background-color: #007bff; }
         .auth-btn:hover { background-color: #0056b3; }
         .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
+        .ingredient-row { display: flex; gap: 5px; align-items: center; margin-bottom: 5px; }
+        .ingredient-row input, .ingredient-row select { width: auto; }
+        .ingredient-row button { background: #dc3545; color: #fff; padding: 4px 10px; font-size: 1em; }
+        .ingredient-row button:hover { background: #c82333; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -79,6 +83,7 @@
         let dishes = [];
         let dishesDocs = [];
         let editingIndex = null;
+        let currentIngredients = [];
 
         async function loadData() {
             const dishesSnap = await getDocs(collection(db, "dishes"));
@@ -87,18 +92,54 @@
             renderDishList();
         }
 
+        window.addIngredientRow = function() {
+            currentIngredients.push({ name: '', quantity: '', unit: 'кг' });
+            renderIngredientInputs();
+        };
+
+        window.removeIngredientRow = function(index) {
+            currentIngredients.splice(index, 1);
+            renderIngredientInputs();
+        };
+
+        window.updateIngredientField = function(index, field, value) {
+            currentIngredients[index][field] = value;
+        };
+
+        function renderIngredientInputs() {
+            const container = document.getElementById('ingredientInputs');
+            container.innerHTML = '';
+            currentIngredients.forEach((ing, idx) => {
+                const row = document.createElement('div');
+                row.className = 'ingredient-row';
+                row.innerHTML = `
+                    <input type="text" placeholder="Назва" value="${ing.name}" onchange="updateIngredientField(${idx}, 'name', this.value)">
+                    <input type="number" placeholder="Кількість" min="0" step="0.001" value="${ing.quantity}" onchange="updateIngredientField(${idx}, 'quantity', this.value)">
+                    <select onchange="updateIngredientField(${idx}, 'unit', this.value)">
+                        <option value="кг" ${ing.unit === 'кг' ? 'selected' : ''}>кг</option>
+                        <option value="г" ${ing.unit === 'г' ? 'selected' : ''}>г</option>
+                        <option value="шт" ${ing.unit === 'шт' ? 'selected' : ''}>шт</option>
+                        <option value="л" ${ing.unit === 'л' ? 'selected' : ''}>л</option>
+                    </select>
+                    <button type="button" onclick="removeIngredientRow(${idx})">✕</button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
         window.saveDish = async function() {
             const name = document.getElementById('dishName').value.trim();
-            let ingredients;
-            try {
-                ingredients = JSON.parse(document.getElementById('dishIngredients').value);
-            } catch {
-                document.getElementById('dishError').textContent = 'Некоректний формат інгредієнтів!';
-                document.getElementById('dishError').style.display = 'block';
-                return;
-            }
-            if (!name || !Array.isArray(ingredients)) {
-                document.getElementById('dishError').textContent = 'Введіть назву і коректний масив інгредієнтів!';
+            // Перетворюємо кількість у число, ігноруємо порожні інгредієнти
+            const ingredients = currentIngredients
+                .map(ing => ({
+                    name: ing.name.trim(),
+                    quantity: parseFloat(ing.quantity) || 0,
+                    unit: ing.unit || 'кг'
+                }))
+                .filter(ing => ing.name && ing.quantity > 0);
+
+            if (!name || !Array.isArray(ingredients) || ingredients.length === 0) {
+                document.getElementById('dishError').textContent = 'Введіть назву і хоча б один інгредієнт!';
                 document.getElementById('dishError').style.display = 'block';
                 return;
             }
@@ -111,27 +152,34 @@
                 await addDoc(collection(db, "dishes"), { name, ingredients });
             }
             document.getElementById('dishName').value = '';
-            document.getElementById('dishIngredients').value = '';
+            currentIngredients = [];
+            renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
             await loadData();
-        }
+        };
 
         window.editDish = function(index) {
             const dish = dishes[index];
             document.getElementById('dishName').value = dish.name;
-            document.getElementById('dishIngredients').value = JSON.stringify(dish.ingredients, null, 2);
+            currentIngredients = dish.ingredients.map(ing => ({
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit || 'кг'
+            }));
+            renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'inline';
             editingIndex = index;
-        }
+        };
 
         window.cancelEdit = function() {
             document.getElementById('dishName').value = '';
-            document.getElementById('dishIngredients').value = '';
+            currentIngredients = [];
+            renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
             document.getElementById('dishError').style.display = 'none';
-        }
+        };
 
         window.deleteDish = async function(index) {
             if (confirm('Ви впевнені, що хочете видалити цю страву?')) {
@@ -139,7 +187,7 @@
                 await deleteDoc(doc(db, "dishes", dishId));
                 await loadData();
             }
-        }
+        };
 
         function renderDishList() {
             const dishList = document.getElementById('dishList');
@@ -150,20 +198,26 @@
                 const item = document.createElement('div');
                 item.className = 'dish-item';
                 item.innerHTML = `
-                    <div>
-                        <strong>${dish.name}</strong>
-                        <pre style="margin:0;font-size:0.9em;">${JSON.stringify(dish.ingredients, null, 2)}</pre>
-                    </div>
-                    <div>
-                        <button class="action-btn" onclick="editDish(${realIndex})">Редагувати</button>
-                        <button class="action-btn delete" onclick="deleteDish(${realIndex})">Видалити</button>
-                    </div>
+    <div>
+        <strong>${dish.name}</strong>
+        <ul style="margin:0 0 0 15px; padding:0;">
+            ${dish.ingredients.map(ing => `<li>${ing.name} — ${ing.quantity} ${ing.unit ? ing.unit : 'кг'}</li>`).join('')}
+        </ul>
+    </div>
+    <div>
+        <button class="action-btn" onclick="editDish(${realIndex})">Редагувати</button>
+        <button class="action-btn delete" onclick="deleteDish(${realIndex})">Видалити</button>
+    </div>
                 `;
                 dishList.appendChild(item);
             });
         }
 
-        window.onload = loadData;
+        // Ініціалізація інгредієнтів при завантаженні сторінки
+        window.onload = function() {
+            loadData();
+            renderIngredientInputs();
+        };
     </script>
 </head>
 <body>
@@ -188,11 +242,12 @@
             <h2>Додати/Редагувати страву</h2>
             <div class="dish-form">
                 <input type="text" id="dishName" placeholder="Назва страви">
-                <textarea id="dishIngredients" placeholder='Масив інгредієнтів у форматі JSON' rows="6" style="width:98%;"></textarea>
+                <div id="ingredientInputs"></div>
+                <button type="button" onclick="addIngredientRow()">Додати інгредієнт</button>
                 <button onclick="saveDish()">Зберегти страву</button>
                 <button onclick="cancelEdit()" id="cancelEditBtn" style="display: none;">Скасувати</button>
             </div>
-            <p id="dishError" class="error">Введіть назву і коректний масив інгредієнтів!</p>
+            <p id="dishError" class="error">Введіть назву і хоча б один інгредієнт!</p>
         </div>
         <div class="section">
             <h2>Усі страви</h2>
