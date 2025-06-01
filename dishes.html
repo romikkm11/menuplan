@@ -21,7 +21,7 @@
         .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .dish-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .dish-form { margin-top: 10px; }
-        input, button, textarea, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        input, button, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
         button { background-color: #28a745; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #218838; }
         .action-btn { background-color: #007bff; color: white; border: none; cursor: pointer; margin-left: 5px; }
@@ -36,6 +36,7 @@
         .ingredient-row input, .ingredient-row select { width: auto; }
         .ingredient-row button { background: #dc3545; color: #fff; padding: 4px 10px; font-size: 1em; }
         .ingredient-row button:hover { background: #c82333; }
+        .ingredient-row datalist { max-height: 100px; overflow-y: auto; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -82,6 +83,7 @@
         // --- ОСНОВНИЙ КОД ---
         let dishes = [];
         let dishesDocs = [];
+        let ingredients = [];
         let editingIndex = null;
         let currentIngredients = [];
 
@@ -89,7 +91,12 @@
             const dishesSnap = await getDocs(collection(db, "dishes"));
             dishes = dishesSnap.docs.map(doc => doc.data());
             dishesDocs = dishesSnap.docs.map(doc => doc.id);
+
+            const ingredientsSnap = await getDocs(collection(db, "ingredients"));
+            ingredients = ingredientsSnap.docs.map(doc => doc.data());
+
             renderDishList();
+            renderIngredientInputs();
         }
 
         window.addIngredientRow = function() {
@@ -112,8 +119,12 @@
             currentIngredients.forEach((ing, idx) => {
                 const row = document.createElement('div');
                 row.className = 'ingredient-row';
+                // Список назв інгредієнтів для автодоповнення
+                const ingredientNames = ingredients.map(i => i.name);
                 row.innerHTML = `
-                    <input type="text" placeholder="Назва" value="${ing.name}" onchange="updateIngredientField(${idx}, 'name', this.value)">
+                    <input type="text" placeholder="Назва" list="ingredientList" value="${ing.name}" 
+                        onchange="updateIngredientField(${idx}, 'name', this.value)" 
+                        oninput="validateIngredientInput(this, ${idx})">
                     <input type="number" placeholder="Кількість" min="0" step="0.001" value="${ing.quantity}" onchange="updateIngredientField(${idx}, 'quantity', this.value)">
                     <select onchange="updateIngredientField(${idx}, 'unit', this.value)">
                         <option value="кг" ${ing.unit === 'кг' ? 'selected' : ''}>кг</option>
@@ -125,12 +136,36 @@
                 `;
                 container.appendChild(row);
             });
+            // Додаємо datalist для автодоповнення (один раз на сторінку)
+            if (!document.getElementById('ingredientList')) {
+                const datalist = document.createElement('datalist');
+                datalist.id = 'ingredientList';
+                datalist.innerHTML = ingredients.map(i => `<option value="${i.name}">`).join('');
+                document.body.appendChild(datalist);
+            } else {
+                // Оновити datalist якщо змінився список інгредієнтів
+                document.getElementById('ingredientList').innerHTML = ingredients.map(i => `<option value="${i.name}">`).join('');
+            }
         }
+
+        // Забороняємо додавати інгредієнт, якого немає у списку
+        window.validateIngredientInput = function(input, idx) {
+            const val = input.value.trim();
+            const exists = ingredients.some(i => i.name === val);
+            if (!exists && val !== '') {
+                input.setCustomValidity('Оберіть інгредієнт зі списку!');
+                input.reportValidity();
+                currentIngredients[idx].name = '';
+            } else {
+                input.setCustomValidity('');
+                currentIngredients[idx].name = val;
+            }
+        };
 
         window.saveDish = async function() {
             const name = document.getElementById('dishName').value.trim();
             // Перетворюємо кількість у число, ігноруємо порожні інгредієнти
-            const ingredients = currentIngredients
+            const ingredientsArr = currentIngredients
                 .map(ing => ({
                     name: ing.name.trim(),
                     quantity: parseFloat(ing.quantity) || 0,
@@ -138,8 +173,10 @@
                 }))
                 .filter(ing => ing.name && ing.quantity > 0);
 
-            if (!name || !Array.isArray(ingredients) || ingredients.length === 0) {
-                document.getElementById('dishError').textContent = 'Введіть назву і хоча б один інгредієнт!';
+            // Перевірка: всі інгредієнти мають бути у списку ingredients
+            const allExist = ingredientsArr.every(ing => ingredients.some(i => i.name === ing.name));
+            if (!name || !Array.isArray(ingredientsArr) || ingredientsArr.length === 0 || !allExist) {
+                document.getElementById('dishError').textContent = 'Введіть назву і хоча б один існуючий інгредієнт!';
                 document.getElementById('dishError').style.display = 'block';
                 return;
             }
@@ -147,9 +184,9 @@
 
             if (editingIndex !== null) {
                 const dishId = dishesDocs[editingIndex];
-                await setDoc(doc(db, "dishes", dishId), { name, ingredients });
+                await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr });
             } else {
-                await addDoc(collection(db, "dishes"), { name, ingredients });
+                await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr });
             }
             document.getElementById('dishName').value = '';
             currentIngredients = [];
@@ -213,11 +250,7 @@
             });
         }
 
-        // Ініціалізація інгредієнтів при завантаженні сторінки
-        window.onload = function() {
-            loadData();
-            renderIngredientInputs();
-        };
+        window.onload = loadData;
     </script>
 </head>
 <body>
@@ -247,7 +280,7 @@
                 <button onclick="saveDish()">Зберегти страву</button>
                 <button onclick="cancelEdit()" id="cancelEditBtn" style="display: none;">Скасувати</button>
             </div>
-            <p id="dishError" class="error">Введіть назву і хоча б один інгредієнт!</p>
+            <p id="dishError" class="error">Введіть назву і хоча б один існуючий інгредієнт!</p>
         </div>
         <div class="section">
             <h2>Усі страви</h2>
