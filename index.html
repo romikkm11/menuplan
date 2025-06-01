@@ -23,10 +23,11 @@
         button { background-color: #28a745; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #218838; }
         .menu, .shopping-list { margin-top: 10px; }
-        .menu-day, .shopping-item { padding: 10px; border-bottom: 1px solid #eee; }
-        .menu-day { display: flex; flex-wrap: wrap; align-items: center; }
-        .menu-day strong { flex: 0 0 100px; }
-        .menu-day select { flex: 1; min-width: 150px; max-width: 200px; }
+        .menu-table { width: 100%; border-collapse: collapse; }
+        .menu-table th, .menu-table td { padding: 8px 5px; }
+        .menu-table th { background: #f8f9fa; text-align: center; }
+        .menu-table td { border-bottom: 1px solid #eee; }
+        .menu-table select { min-width: 120px; max-width: 200px; }
         .error { color: red; display: none; }
         .total-cost { font-weight: bold; padding: 10px; margin-top: 10px; background-color: #f8f9fa; border-radius: 4px; }
         .auth-btn { background-color: #007bff; }
@@ -78,7 +79,8 @@
         // --- ОСНОВНИЙ КОД ---
         let dishes = [];
         let ingredients = [];
-        let menu = Array(7).fill(""); // 7 днів
+        const mealTypes = ['Сніданок', 'Обід', 'Вечеря'];
+        let menu = Array(7).fill().map(() => ({ Сніданок: '', Обід: '', Вечеря: '' }));
 
         async function loadData() {
             const dishesSnap = await getDocs(collection(db, "dishes"));
@@ -99,29 +101,49 @@
             const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'];
             const menuDiv = document.getElementById('menu');
             menuDiv.innerHTML = '';
-            days.forEach((day, i) => {
-                const menuDay = document.createElement('div');
-                menuDay.className = 'menu-day';
-                menuDay.innerHTML = `
-                    <strong>${day}:</strong>
-                    <select class="menu-dish" data-index="${i}">
-                        <option value="">Виберіть страву</option>
-                        ${dishes.map(d => `<option value="${d.name}" ${menu[i] === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
-                    </select>
-                `;
-                menuDiv.appendChild(menuDay);
+
+            // Створюємо таблицю
+            let table = document.createElement('table');
+            table.className = 'menu-table';
+
+            // Заголовок
+            let thead = document.createElement('thead');
+            let headRow = document.createElement('tr');
+            headRow.innerHTML = `<th>День</th>` + mealTypes.map(meal => `<th>${meal}</th>`).join('');
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+
+            // Рядки для кожного дня
+            let tbody = document.createElement('tbody');
+            days.forEach((day, dayIdx) => {
+                let row = document.createElement('tr');
+                row.innerHTML = `<td><strong>${day}</strong></td>` +
+                    mealTypes.map(meal =>
+                        `<td>
+                            <select class="menu-dish" data-day="${dayIdx}" data-meal="${meal}">
+                                <option value="">Виберіть страву</option>
+                                ${dishes.map(d => `<option value="${d.name}" ${menu[dayIdx][meal] === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                            </select>
+                        </td>`
+                    ).join('');
+                tbody.appendChild(row);
             });
+            table.appendChild(tbody);
+
+            menuDiv.appendChild(table);
+
             // Додаємо обробник вибору страв
             document.querySelectorAll('.menu-dish').forEach(select => {
                 select.addEventListener('change', function() {
-                    menu[+this.dataset.index] = this.value;
+                    menu[+this.dataset.day][this.dataset.meal] = this.value;
                 });
             });
         }
 
         window.generateShoppingList = function() {
-            const menuDishes = menu.filter(Boolean);
-            if (menuDishes.length !== 7 || menuDishes.some(name => !dishes.find(d => d.name === name))) {
+            // Збираємо всі вибрані страви
+            const menuDishes = menu.flatMap(day => mealTypes.map(meal => day[meal]).filter(Boolean));
+            if (menuDishes.length !== 7 * 3 || menuDishes.some(name => !dishes.find(d => d.name === name))) {
                 document.getElementById('menuError').style.display = 'block';
                 document.getElementById('shoppingList').innerHTML = '';
                 document.getElementById('totalCost').innerHTML = '';
@@ -147,9 +169,13 @@
             const shoppingListDiv = document.getElementById('shoppingList');
             shoppingListDiv.innerHTML = '';
             Object.entries(shopping).forEach(([name, data]) => {
-                const cost = data.quantity * data.price;
-                totalCost += cost;
-                shoppingListDiv.innerHTML += `<div class="shopping-item">${name}: ${data.quantity} кг × ${data.price} грн/кг = ${cost.toFixed(2)} грн</div>`;
+                let line = `${name}: ${data.quantity} кг`;
+                if (data.price && data.price > 0) {
+                    const cost = data.quantity * data.price;
+                    totalCost += cost;
+                    line += ` — ${cost.toFixed(2)} грн`;
+                }
+                shoppingListDiv.innerHTML += `<div class="shopping-item">${line}</div>`;
             });
             document.getElementById('totalCost').innerHTML = `Загальна вартість: ${totalCost.toFixed(2)} грн`;
         }
