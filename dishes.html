@@ -120,7 +120,6 @@
                 const row = document.createElement('div');
                 row.className = 'ingredient-row';
                 // Список назв інгредієнтів для автодоповнення
-                const ingredientNames = ingredients.map(i => i.name);
                 row.innerHTML = `
                     <input type="text" placeholder="Назва" list="ingredientList" value="${ing.name}" 
                         onchange="updateIngredientField(${idx}, 'name', this.value)" 
@@ -164,6 +163,7 @@
 
         window.saveDish = async function() {
             const name = document.getElementById('dishName').value.trim();
+            const totalPrice = parseFloat(document.getElementById('dishTotalPrice').value) || 0;
             // Перетворюємо кількість у число, ігноруємо порожні інгредієнти
             const ingredientsArr = currentIngredients
                 .map(ing => ({
@@ -184,11 +184,12 @@
 
             if (editingIndex !== null) {
                 const dishId = dishesDocs[editingIndex];
-                await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr });
+                await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr, totalPrice });
             } else {
-                await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr });
+                await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr, totalPrice });
             }
             document.getElementById('dishName').value = '';
+            document.getElementById('dishTotalPrice').value = '';
             currentIngredients = [];
             renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
@@ -199,6 +200,7 @@
         window.editDish = function(index) {
             const dish = dishes[index];
             document.getElementById('dishName').value = dish.name;
+            document.getElementById('dishTotalPrice').value = dish.totalPrice || '';
             currentIngredients = dish.ingredients.map(ing => ({
                 name: ing.name,
                 quantity: ing.quantity,
@@ -211,6 +213,7 @@
 
         window.cancelEdit = function() {
             document.getElementById('dishName').value = '';
+            document.getElementById('dishTotalPrice').value = '';
             currentIngredients = [];
             renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
@@ -237,6 +240,9 @@
                 item.innerHTML = `
     <div>
         <strong>${dish.name}</strong>
+        <span style="color:#888; font-size:0.95em;">
+            ${dish.totalPrice ? `Орієнтовна вартість: ${dish.totalPrice} грн` : ''}
+        </span>
         <ul style="margin:0 0 0 15px; padding:0;">
             ${dish.ingredients.map(ing => `<li>${ing.name} — ${ing.quantity} ${ing.unit ? ing.unit : 'кг'}</li>`).join('')}
         </ul>
@@ -275,6 +281,7 @@
             <h2>Додати/Редагувати страву</h2>
             <div class="dish-form">
                 <input type="text" id="dishName" placeholder="Назва страви">
+                <input type="number" id="dishTotalPrice" placeholder="Орієнтовна вартість страви (грн)" min="0" step="0.01">
                 <div id="ingredientInputs"></div>
                 <button type="button" onclick="addIngredientRow()">Додати інгредієнт</button>
                 <button onclick="saveDish()">Зберегти страву</button>

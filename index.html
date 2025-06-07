@@ -33,6 +33,7 @@
         .auth-btn { background-color: #007bff; }
         .auth-btn:hover { background-color: #0056b3; }
         .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
+        #menuTotalDishesPrice { font-weight:bold; margin:10px 0; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -132,12 +133,38 @@
 
             menuDiv.appendChild(table);
 
+            // Додаємо блок для відображення вартості, якщо ще не додано
+            if (!document.getElementById('menuTotalDishesPrice')) {
+                const priceDiv = document.createElement('div');
+                priceDiv.id = 'menuTotalDishesPrice';
+                priceDiv.style = 'font-weight:bold; margin:10px 0;';
+                menuDiv.parentNode.insertBefore(priceDiv, menuDiv.nextSibling);
+            }
+            updateMenuTotalDishesPrice();
+
             // Додаємо обробник вибору страв
             document.querySelectorAll('.menu-dish').forEach(select => {
                 select.addEventListener('change', function() {
                     menu[+this.dataset.day][this.dataset.meal] = this.value;
+                    updateMenuTotalDishesPrice();
                 });
             });
+        }
+
+        function updateMenuTotalDishesPrice() {
+            let total = 0;
+            let selected = [];
+            menu.forEach(day => {
+                mealTypes.forEach(meal => {
+                    if (day[meal]) selected.push(day[meal]);
+                });
+            });
+            selected.forEach(name => {
+                const dish = dishes.find(d => d.name === name);
+                if (dish && dish.totalPrice) total += Number(dish.totalPrice);
+            });
+            document.getElementById('menuTotalDishesPrice').textContent =
+                `Орієнтовна загальна вартість вибраних страв: ${total.toFixed(2)} грн`;
         }
 
         window.generateShoppingList = function() {
