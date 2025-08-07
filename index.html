@@ -34,6 +34,70 @@
         .auth-btn:hover { background-color: #0056b3; }
         .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
         #menuTotalDishesPrice { font-weight:bold; margin:10px 0; }
+        .dish-search-input-popup {
+            width: 95%; padding: 5px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;
+            display: block;
+        }
+        .dish-select-popup {
+            position: absolute;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            padding: 8px;
+            min-width: 220px;
+            max-width: 350px;
+        }
+        .dish-select-popup ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .dish-select-popup li {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .dish-select-popup li.selected,
+        .dish-select-popup li:hover {
+            background: #e9ecef;
+        }
+        /* --- Фіксована ширина для селектора страв --- */
+        .menu-dish {
+            width: 200px !important;
+            min-width: 200px !important;
+            max-width: 200px !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+        /* Кнопка-копіювання у правому верхньому куті */
+        .copy-btn-wrapper {
+            position: absolute;
+            top: 16px;
+            right: 24px;
+            z-index: 2;
+        }
+        .copy-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: #28a745;
+            padding: 4px 8px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .copy-icon-btn:hover {
+            background: #e9ecef;
+        }
+        .section {
+            position: relative;
+        }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -83,6 +147,11 @@
         const mealTypes = ['Сніданок', 'Обід', 'Вечеря'];
         let menu = Array(7).fill().map(() => ({ Сніданок: '', Обід: '', Вечеря: '' }));
 
+        // Функція для отримання страв у алфавітному порядку
+        function getSortedDishes() {
+            return [...dishes].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+        }
+
         async function loadData() {
             const dishesSnap = await getDocs(collection(db, "dishes"));
             dishes = dishesSnap.docs.map(doc => doc.data());
@@ -96,6 +165,115 @@
             const content = document.getElementById('content');
             sidebar.classList.toggle('collapsed');
             content.classList.toggle('collapsed');
+        }
+
+        // --- Кастомний селектор з пошуком у попапі ---
+        function createDishSelect(dayIdx, meal, selectedValue) {
+            // Контейнер для селектора
+            const container = document.createElement('div');
+            container.style.position = 'relative';
+
+            // Основний input (виглядає як select)
+            const selectBtn = document.createElement('button');
+            selectBtn.type = 'button';
+            selectBtn.className = 'menu-dish';
+            selectBtn.style.textAlign = 'left';
+            selectBtn.style.background = '#fff';
+            selectBtn.style.color = '#333';
+            selectBtn.style.border = '1px solid #ccc';
+            selectBtn.style.borderRadius = '4px';
+            selectBtn.style.padding = '8px';
+            selectBtn.style.cursor = 'pointer';
+            selectBtn.dataset.day = dayIdx;
+            selectBtn.dataset.meal = meal;
+            selectBtn.textContent = selectedValue || 'Виберіть страву';
+            // Фіксована ширина, приховує зайвий текст
+            selectBtn.style.width = '200px';
+            selectBtn.style.minWidth = '200px';
+            selectBtn.style.maxWidth = '200px';
+            selectBtn.style.whiteSpace = 'nowrap';
+            selectBtn.style.overflow = 'hidden';
+            selectBtn.style.textOverflow = 'ellipsis';
+
+            container.appendChild(selectBtn);
+
+            let popup = null;
+
+            selectBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Якщо вже відкрито - закриваємо
+                if (popup) {
+                    popup.remove();
+                    popup = null;
+                    return;
+                }
+                // Створюємо попап
+                popup = document.createElement('div');
+                popup.className = 'dish-select-popup';
+
+                // Поле пошуку
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'dish-search-input-popup';
+                input.placeholder = 'Пошук страви...';
+                input.autocomplete = 'off';
+                popup.appendChild(input);
+
+                // Список страв
+                const ul = document.createElement('ul');
+                popup.appendChild(ul);
+
+                function fillList(filter = '') {
+                    ul.innerHTML = '';
+                    getSortedDishes()
+                        .filter(d => d.name.toLowerCase().includes(filter.toLowerCase()))
+                        .forEach(d => {
+                            const li = document.createElement('li');
+                            li.textContent = d.name;
+                            if (d.name === menu[dayIdx][meal]) li.classList.add('selected');
+                            li.style.whiteSpace = 'nowrap';
+                            li.style.overflow = 'hidden';
+                            li.style.textOverflow = 'ellipsis';
+                            li.addEventListener('mousedown', function(ev) {
+                                ev.preventDefault();
+                                selectBtn.textContent = d.name;
+                                menu[+dayIdx][meal] = d.name;
+                                updateMenuTotalDishesPrice();
+                                popup.remove();
+                                popup = null;
+                            });
+                            ul.appendChild(li);
+                        });
+                }
+                fillList('');
+
+                input.addEventListener('input', function() {
+                    fillList(this.value);
+                });
+
+                // Позиціонування попапу
+                popup.style.top = (selectBtn.offsetTop + selectBtn.offsetHeight + 2) + 'px';
+                popup.style.left = selectBtn.offsetLeft + 'px';
+                popup.style.width = selectBtn.offsetWidth + 'px';
+
+                container.appendChild(popup);
+
+                // Фокус на поле пошуку
+                setTimeout(() => input.focus(), 0);
+
+                // Закриття при кліку поза попапом
+                function closePopup(e) {
+                    if (!popup) return;
+                    if (!popup.contains(e.target) && e.target !== selectBtn) {
+                        popup.remove();
+                        popup = null;
+                        document.removeEventListener('mousedown', closePopup);
+                    }
+                }
+                document.addEventListener('mousedown', closePopup);
+            });
+
+            return container;
         }
 
         function renderMenu() {
@@ -118,15 +296,16 @@
             let tbody = document.createElement('tbody');
             days.forEach((day, dayIdx) => {
                 let row = document.createElement('tr');
-                row.innerHTML = `<td><strong>${day}</strong></td>` +
-                    mealTypes.map(meal =>
-                        `<td>
-                            <select class="menu-dish" data-day="${dayIdx}" data-meal="${meal}">
-                                <option value="">Виберіть страву</option>
-                                ${dishes.map(d => `<option value="${d.name}" ${menu[dayIdx][meal] === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
-                            </select>
-                        </td>`
-                    ).join('');
+                row.appendChild((() => {
+                    const td = document.createElement('td');
+                    td.innerHTML = `<strong>${day}</strong>`;
+                    return td;
+                })());
+                mealTypes.forEach(meal => {
+                    const td = document.createElement('td');
+                    td.appendChild(createDishSelect(dayIdx, meal, menu[dayIdx][meal]));
+                    row.appendChild(td);
+                });
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
@@ -141,14 +320,6 @@
                 menuDiv.parentNode.insertBefore(priceDiv, menuDiv.nextSibling);
             }
             updateMenuTotalDishesPrice();
-
-            // Додаємо обробник вибору страв
-            document.querySelectorAll('.menu-dish').forEach(select => {
-                select.addEventListener('change', function() {
-                    menu[+this.dataset.day][this.dataset.meal] = this.value;
-                    updateMenuTotalDishesPrice();
-                });
-            });
         }
 
         function updateMenuTotalDishesPrice() {
@@ -167,6 +338,35 @@
                 `Орієнтовна загальна вартість вибраних страв: ${total.toFixed(2)} грн`;
         }
 
+        // --- КОПІЮВАННЯ СПИСКУ ПОКУПОК ---
+        function showCopyButton(show) {
+            const btn = document.getElementById('copyShoppingListBtn');
+            if (btn) btn.style.display = show ? 'inline-block' : 'none';
+        }
+
+        function copyShoppingList() {
+            const btn = document.getElementById('copyShoppingListBtn');
+            const icon = document.getElementById('copyIcon');
+            const shoppingListDiv = document.getElementById('shoppingList');
+            let text = '';
+            shoppingListDiv.querySelectorAll('.shopping-item').forEach(item => {
+                text += item.textContent + '\n';
+            });
+            const total = document.getElementById('totalCost').textContent;
+            if (total) text += total;
+            navigator.clipboard.writeText(text);
+
+            // Змінити іконку на галочку
+            if (icon) {
+                icon.innerHTML = '✔️';
+                btn.disabled = true;
+                setTimeout(() => {
+                    icon.innerHTML = '📋';
+                    btn.disabled = false;
+                }, 3000);
+            }
+        }
+
         window.generateShoppingList = function() {
             // Збираємо всі вибрані страви
             const menuDishes = menu.flatMap(day => mealTypes.map(meal => day[meal]).filter(Boolean));
@@ -174,6 +374,7 @@
                 document.getElementById('menuError').style.display = 'block';
                 document.getElementById('shoppingList').innerHTML = '';
                 document.getElementById('totalCost').innerHTML = '';
+                showCopyButton(false);
                 return;
             }
             document.getElementById('menuError').style.display = 'none';
@@ -205,9 +406,16 @@
                 shoppingListDiv.innerHTML += `<div class="shopping-item">${line}</div>`;
             });
             document.getElementById('totalCost').innerHTML = `Загальна вартість: ${totalCost.toFixed(2)} грн`;
+
+            // Показати кнопку копіювання
+            showCopyButton(true);
         }
 
-        window.onload = loadData;
+        window.onload = function() {
+            loadData();
+            // Додаємо обробник для кнопки копіювання
+            document.getElementById('copyShoppingListBtn').addEventListener('click', copyShoppingList);
+        };
     </script>
 </head>
 <body>
@@ -234,8 +442,13 @@
             <button onclick="generateShoppingList()">Сформувати список покупок</button>
             <p id="menuError" class="error">Введіть коректні назви страв!</p>
         </div>
-        <div class="section">
+        <div class="section" style="position:relative;">
             <h2>Список покупок</h2>
+            <div class="copy-btn-wrapper">
+                <button id="copyShoppingListBtn" class="copy-icon-btn" style="display:none;" title="Копіювати список">
+                    <span id="copyIcon">📋</span>
+                </button>
+            </div>
             <div id="shoppingList" class="shopping-list"></div>
             <div id="totalCost" class="total-cost"></div>
         </div>
