@@ -1,3 +1,4 @@
+<!-- ...existing code... -->
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -95,9 +96,22 @@
         window.saveIngredient = async function() {
             const name = document.getElementById('ingredientName').value.trim();
             const price = parseFloat(document.getElementById('ingredientPrice').value) || 0;
+            const kcal = parseFloat(document.getElementById('ingredientKcal').value);
 
             if (!name) {
                 document.getElementById('ingredientError').textContent = 'Введіть назву інгредієнта!';
+                document.getElementById('ingredientError').style.display = 'block';
+                return;
+            }
+
+            if (isNaN(kcal)) {
+                document.getElementById('ingredientError').textContent = 'Введіть калорійність інгредієнта (кКал)!';
+                document.getElementById('ingredientError').style.display = 'block';
+                return;
+            }
+
+            if (kcal < 0) {
+                document.getElementById('ingredientError').textContent = 'Калорійність не може бути від\'ємною!';
                 document.getElementById('ingredientError').style.display = 'block';
                 return;
             }
@@ -116,12 +130,13 @@
 
             if (editingIndex !== null) {
                 const ingId = ingredientsDocs[editingIndex];
-                await setDoc(doc(db, "ingredients", ingId), { name, price });
+                await setDoc(doc(db, "ingredients", ingId), { name, price, kcal });
             } else {
-                await addDoc(collection(db, "ingredients"), { name, price });
+                await addDoc(collection(db, "ingredients"), { name, price, kcal });
             }
             document.getElementById('ingredientName').value = '';
             document.getElementById('ingredientPrice').value = '';
+            document.getElementById('ingredientKcal').value = '';
             document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
             await loadData();
@@ -131,6 +146,7 @@
             const ingredient = ingredients[index];
             document.getElementById('ingredientName').value = ingredient.name;
             document.getElementById('ingredientPrice').value = ingredient.price || '';
+            document.getElementById('ingredientKcal').value = ingredient.kcal !== undefined ? ingredient.kcal : '';
             document.getElementById('cancelEditBtn').style.display = 'inline';
             editingIndex = index;
         }
@@ -138,6 +154,7 @@
         window.cancelEdit = function() {
             document.getElementById('ingredientName').value = '';
             document.getElementById('ingredientPrice').value = '';
+            document.getElementById('ingredientKcal').value = '';
             document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
             document.getElementById('ingredientError').style.display = 'none';
@@ -166,7 +183,7 @@
                 const item = document.createElement('div');
                 item.className = 'ingredient-item';
                 item.innerHTML = `
-                    <div>${ing.name}${ing.price ? `, ціна: ${ing.price} грн/кг` : ''}</div>
+                    <div>${ing.name}${ing.price ? `, ціна: ${ing.price} грн/кг` : ''}${ing.kcal !== undefined ? `, калорійність: ${ing.kcal} кКал` : ''}</div>
                     <div>
                         <button class="action-btn" onclick="editIngredient(${realIndex})">Редагувати</button>
                         <button class="action-btn delete" onclick="deleteIngredient(${realIndex})">Видалити</button>
@@ -202,6 +219,7 @@
             <div class="ingredient-form">
                 <input type="text" id="ingredientName" placeholder="Назва інгредієнта">
                 <input type="number" id="ingredientPrice" placeholder="Ціна за кг (необов’язково)" min="0" step="0.01">
+                <input type="number" id="ingredientKcal" placeholder="Калорійність (кКал)" min="0" step="0.1" required>
                 <button onclick="saveIngredient()">Зберегти інгредієнт</button>
                 <button onclick="cancelEdit()" id="cancelEditBtn" style="display: none;">Скасувати</button>
             </div>
@@ -214,3 +232,4 @@
     </div>
 </body>
 </html>
+<!-- ...existing code... -->
