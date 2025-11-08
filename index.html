@@ -1,3 +1,4 @@
+<!-- ...existing code... -->
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -24,7 +25,7 @@
         button:hover { background-color: #218838; }
         .menu, .shopping-list { margin-top: 10px; }
         .menu-table { width: 100%; border-collapse: collapse; }
-        .menu-table th, .menu-table td { padding: 8px 5px; }
+        .menu-table th, .menu-table td { padding: 8px 5px; text-align: center; vertical-align: middle; }
         .menu-table th { background: #f8f9fa; text-align: center; }
         .menu-table td { border-bottom: 1px solid #eee; }
         .menu-table select { min-width: 120px; max-width: 200px; }
@@ -98,6 +99,9 @@
         .section {
             position: relative;
         }
+        /* Щоб блок калорій виглядав компактно (не використовується коли калорії у таблиці) */
+        #dailyCalories { margin-top: 8px; font-weight: 600; }
+        #dailyCalories .day-cal { margin: 2px 0; font-weight: 400; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -145,6 +149,7 @@
         let dishes = [];
         let ingredients = [];
         const mealTypes = ['Сніданок', 'Обід', 'Вечеря'];
+        const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'];
         let menu = Array(7).fill().map(() => ({ Сніданок: '', Обід: '', Вечеря: '' }));
 
         // Функція для отримання страв у алфавітному порядку
@@ -239,6 +244,7 @@
                                 selectBtn.textContent = d.name;
                                 menu[+dayIdx][meal] = d.name;
                                 updateMenuTotalDishesPrice();
+                                updateDailyCalories(); // <-- оновити калорійність після вибору
                                 popup.remove();
                                 popup = null;
                             });
@@ -251,12 +257,13 @@
                     fillList(this.value);
                 });
 
-                // Позиціонування попапу
-                popup.style.top = (selectBtn.offsetTop + selectBtn.offsetHeight + 2) + 'px';
-                popup.style.left = selectBtn.offsetLeft + 'px';
+                // Позиціонування попапу — додаємо до body і вирівнюємо лівий край з кнопкою
+                popup.style.position = 'absolute';
+                const btnRect = selectBtn.getBoundingClientRect();
+                popup.style.top = (btnRect.bottom + window.scrollY + 2) + 'px';
+                popup.style.left = (btnRect.left + window.scrollX) + 'px';
                 popup.style.width = selectBtn.offsetWidth + 'px';
-
-                container.appendChild(popup);
+                document.body.appendChild(popup);
 
                 // Фокус на поле пошуку
                 setTimeout(() => input.focus(), 0);
@@ -277,7 +284,6 @@
         }
 
         function renderMenu() {
-            const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'];
             const menuDiv = document.getElementById('menu');
             menuDiv.innerHTML = '';
 
@@ -285,10 +291,10 @@
             let table = document.createElement('table');
             table.className = 'menu-table';
 
-            // Заголовок
+            // Заголовок з додатковою колонкою для калорійності
             let thead = document.createElement('thead');
             let headRow = document.createElement('tr');
-            headRow.innerHTML = `<th>День</th>` + mealTypes.map(meal => `<th>${meal}</th>`).join('');
+            headRow.innerHTML = `<th>День</th>` + mealTypes.map(meal => `<th>${meal}</th>`).join('') + `<th>Калорійність (кКал)</th>`;
             thead.appendChild(headRow);
             table.appendChild(thead);
 
@@ -306,6 +312,11 @@
                     td.appendChild(createDishSelect(dayIdx, meal, menu[dayIdx][meal]));
                     row.appendChild(td);
                 });
+                const caloriesTd = document.createElement('td');
+                caloriesTd.id = `cal-${dayIdx}`;
+                caloriesTd.textContent = '0.0';
+                row.appendChild(caloriesTd);
+
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
@@ -319,7 +330,38 @@
                 priceDiv.style = 'font-weight:bold; margin:10px 0;';
                 menuDiv.parentNode.insertBefore(priceDiv, menuDiv.nextSibling);
             }
+
             updateMenuTotalDishesPrice();
+            updateDailyCalories();
+        }
+
+        // Обчислення калорійності однієї страви на основі її інгредієнтів
+       function calculateDishCalories(dish) {
+    if (!dish || !dish.ingredients || !Array.isArray(dish.ingredients)) return 0;
+    let total = 0;
+    dish.ingredients.forEach(ing => {
+        const qty = Number(ing.quantity) || 0; // кількість в кг
+        // kcal в БД вказані на 100 г -> множимо на 10 щоб отримати кКал на 1 кг
+        const baseIng = ingredients.find(i => i.name === ing.name);
+        const kcalPerKg = (ing.kcal !== undefined ? Number(ing.kcal) * 10 : (baseIng ? Number(baseIng.kcal) * 10 : 0)) || 0;
+        total += qty * kcalPerKg;
+    });
+    return total;
+}
+
+        // Оновити калорійність для кожного дня у таблиці
+        function updateDailyCalories() {
+            days.forEach((day, idx) => {
+                let dayTotal = 0;
+                mealTypes.forEach(meal => {
+                    const dishName = menu[idx][meal];
+                    if (!dishName) return;
+                    const dish = dishes.find(d => d.name === dishName);
+                    if (dish) dayTotal += calculateDishCalories(dish);
+                });
+                const el = document.getElementById(`cal-${idx}`);
+                if (el) el.textContent = dayTotal.toFixed(1);
+            });
         }
 
         function updateMenuTotalDishesPrice() {
@@ -414,7 +456,8 @@
         window.onload = function() {
             loadData();
             // Додаємо обробник для кнопки копіювання
-            document.getElementById('copyShoppingListBtn').addEventListener('click', copyShoppingList);
+            const copyBtn = document.getElementById('copyShoppingListBtn');
+            if (copyBtn) copyBtn.addEventListener('click', copyShoppingList);
         };
     </script>
 </head>
@@ -455,3 +498,4 @@
     </div>
 </body>
 </html>
+<!-- ...existing code... -->
