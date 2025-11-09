@@ -204,10 +204,12 @@
         // --- ОСНОВНИЙ КОД ---
         let dishes = [];
         let ingredients = [];
-        const mealTypes = ['Сніданок', 'Обід', 'Вечеря'];
+        // Додано "Підвечірок" після обіду
+        const mealTypes = ['Сніданок', 'Обід', 'Підвечірок', 'Вечеря'];
         const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'];
-        let menu = Array(7).fill().map(() => ({ Сніданок: '', Обід: '', Вечеря: '' }));
-        let menuWeights = Array(7).fill().map(() => ({ Сніданок: null, Обід: null, Вечеря: null }));
+        // Ініціалізувати меню та ваги з новим полем 'Підвечірок'
+        let menu = Array(7).fill().map(() => ({ Сніданок: '', Обід: '', Підвечірок: '', Вечеря: '' }));
+        let menuWeights = Array(7).fill().map(() => ({ Сніданок: null, Обід: null, Підвечірок: null, Вечеря: null }));
 
         function getSortedDishes() { return [...dishes].sort((a,b) => a.name.localeCompare(b.name, 'uk')); }
 
@@ -467,7 +469,8 @@
         window.generateShoppingList = function() {
             const menuDishes = [];
             menu.forEach((dayObj, dayIdx) => mealTypes.forEach(meal => { if (dayObj[meal]) menuDishes.push({ name: dayObj[meal], dayIdx, meal }); }));
-            if (menuDishes.length !== 7 * 3 || menuDishes.some(item => !dishes.find(d => d.name === item.name))) {
+            // очікуємо 7 днів * 4 прийоми їжі
+            if (menuDishes.length !== 7 * 4 || menuDishes.some(item => !dishes.find(d => d.name === item.name))) {
                 const err = document.getElementById('menuError'); if (err) err.style.display = 'block';
                 const sl = document.getElementById('shoppingList'); if (sl) sl.innerHTML = '';
                 const tc = document.getElementById('totalCost'); if (tc) tc.innerHTML = '';
