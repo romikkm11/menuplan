@@ -469,18 +469,25 @@
         window.generateShoppingList = function() {
             const menuDishes = [];
             menu.forEach((dayObj, dayIdx) => mealTypes.forEach(meal => { if (dayObj[meal]) menuDishes.push({ name: dayObj[meal], dayIdx, meal }); }));
-            // очікуємо 7 днів * 4 прийоми їжі
-            if (menuDishes.length !== 7 * 4 || menuDishes.some(item => !dishes.find(d => d.name === item.name))) {
-                const err = document.getElementById('menuError'); if (err) err.style.display = 'block';
-                const sl = document.getElementById('shoppingList'); if (sl) sl.innerHTML = '';
-                const tc = document.getElementById('totalCost'); if (tc) tc.innerHTML = '';
-                showCopyButton(false); return;
+            const err = document.getElementById('menuError');
+            if (menuDishes.length < 7 * 4) {
+                err.textContent = 'Не заповнено всі дні!';
+                err.style.display = 'block';
+            } else {
+                err.style.display = 'none';
             }
-            const err = document.getElementById('menuError'); if (err) err.style.display = 'none';
+
+            if (menuDishes.length === 0) {
+                const shoppingListDiv = document.getElementById('shoppingList'); shoppingListDiv.innerHTML = '';
+                const totalEl = document.getElementById('totalCost'); totalEl.innerHTML = '';
+                showCopyButton(false);
+                return;
+            }
 
             const shopping = {}; let totalCost = 0;
             menuDishes.forEach(item => {
                 const dish = dishes.find(d => d.name === item.name);
+                if (!dish) return; // пропустити, якщо страва не знайдена
                 const baseQty = getDishBaseQty(dish);
                 const w = menuWeights[item.dayIdx][item.meal] ?? (baseQty > 0 ? baseQty : 0.1);
                 const factor = baseQty > 0 ? (w / baseQty) : 1;
@@ -497,7 +504,7 @@
                 if (data.price && data.price > 0) { const cost = data.quantity * data.price; totalCost += cost; line += ` — ${cost.toFixed(2)} грн`; }
                 shoppingListDiv.innerHTML += `<div class="shopping-item">${line}</div>`;
             });
-            const totalEl = document.getElementById('totalCost'); if (totalEl) totalEl.innerHTML = `Загальна вартість: ${totalCost.toFixed(2)} грн`;
+            const totalEl = document.getElementById('totalCost'); totalEl.innerHTML = `Загальна вартість: ${totalCost.toFixed(2)} грн`;
             showCopyButton(true);
         };
 
