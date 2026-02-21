@@ -79,6 +79,7 @@
         .menu-table th { background: #f8f9fa; text-align: center; }
         .menu-table td { border-bottom: 1px solid #eee; }
         .menu-table select { min-width: 120px; max-width: 200px; }
+        .calories-column { min-width: 140px; white-space: nowrap; }
         .error { color: red; display: none; }
         .total-cost { font-weight: bold; padding: 10px; margin-top: 10px; background-color: #f8f9fa; border-radius: 4px; }
         .auth-btn { background-color: #007bff; }
@@ -132,6 +133,20 @@
             cursor: pointer;
         }
 
+        .menu-dish-row { display:flex; align-items:center; gap:6px; }
+
+        .clear-dish-btn {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.12s, background 0.12s;
+        }
+        .clear-dish-btn:hover { color: #555; background: rgba(0,0,0,0.03); }
+
         .weight-controls {
             display: flex;
             align-items: center;
@@ -162,6 +177,62 @@
         .copy-icon-btn:hover { background: #e9ecef; }
         #dailyCalories { margin-top: 8px; font-weight: 600; }
         #dailyCalories .day-cal { margin: 2px 0; font-weight: 400; }
+
+        .add-meal-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            font-size: 1.3em;
+            cursor: pointer;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-meal-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .meal-name-input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            font-size: 0.95em;
+            box-sizing: border-box;
+            min-width: 250px;
+        }
+
+        .meal-name-input:focus {
+            outline: none;
+            border-color: #0056b3;
+        }
+
+        .meal-header {
+            cursor: move;
+            user-select: none;
+            transition: transform 0.2s ease;
+        }
+
+        .meal-header.dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+        }
+
+        .meal-header.drag-over {
+            background-color: #cce5ff !important;
+            transform: translateX(60px);
+        }
+
+        .meal-header.drag-over.right {
+            transform: translateX(-60px);
+        }
+        .meal-total-weight { font-size: 0.9em; color: #555; margin-top: 6px; }
     </style>
 
     <script type="module">
@@ -204,12 +275,108 @@
         // --- ОСНОВНИЙ КОД ---
         let dishes = [];
         let ingredients = [];
-        // Додано "Підвечірок" після обіду
-        const mealTypes = ['Сніданок', 'Обід', 'Підвечірок', 'Вечеря'];
-        const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П’ятниця', 'Субота', 'Неділя'];
-        // Ініціалізувати меню та ваги з новим полем 'Підвечірок'
-        let menu = Array(7).fill().map(() => ({ Сніданок: '', Обід: '', Підвечірок: '', Вечеря: '' }));
-        let menuWeights = Array(7).fill().map(() => ({ Сніданок: null, Обід: null, Підвечірок: null, Вечеря: null }));
+        // Завантажити типи прибрм їжі з localStorage, або використати стандартні
+        let mealTypes = loadMealTypes();
+        const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота', 'Неділя'];
+        
+        // Ініціалізувати меню як масив масивів страв на кожний прийом
+        let menu = Array(7).fill().map(() => {
+            const dayMeals = {};
+            mealTypes.forEach(meal => { dayMeals[meal] = []; });
+            return dayMeals;
+        });
+        // note: weights are stored per-dish in each menu entry as { name, weight }
+        let menuWeights = Array(7).fill().map(() => {
+            const dayWeights = {};
+            mealTypes.forEach(meal => { dayWeights[meal] = []; });
+            return dayWeights;
+        });
+
+        // Завантажити типи прийомів їжі з localStorage
+        function loadMealTypes() {
+            const stored = localStorage.getItem('mealTypes');
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch (e) {
+                    return ['Сніданок', 'Обід', 'Підвечірок', 'Вечеря'];
+                }
+            }
+            return ['Сніданок', 'Обід', 'Підвечірок', 'Вечеря'];
+        }
+
+        // Зберегти типи прийомів їжі у localStorage
+        function saveMealTypes() {
+            localStorage.setItem('mealTypes', JSON.stringify(mealTypes));
+        }
+
+        // Додати новий прийом їжі
+        window.addNewMealColumn = function addNewMealColumn() {
+            const table = document.querySelector('.menu-table');
+            if (!table) return;
+            
+            const thead = table.querySelector('thead');
+            const headRow = thead.querySelector('tr');
+            
+            // Знаходимо комірку з кнопкою + (перед калорійністю)
+            const addMealTh = headRow.cells[headRow.cells.length - 2];
+            
+            // Очищуємо комірку
+            addMealTh.innerHTML = '';
+            addMealTh.style.padding = '8px';
+            
+            // Створюємо поле введення
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'meal-name-input';
+            input.placeholder = 'Назва прийому...';
+            
+            input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                    const mealName = input.value.trim();
+                    if (!mealName) {
+                        alert('Будь ласка, введіть назву прийому їжі');
+                        return;
+                    }
+                    
+                    if (mealTypes.includes(mealName)) {
+                        alert('Такий прийом їжі вже існує');
+                        input.focus();
+                        return;
+                    }
+                    
+                    // Додаємо новий прийом
+                    mealTypes.push(mealName);
+                    saveMealTypes();
+                    
+                    // Оновлюємо структури меню (масив страв для нового прийому)
+                    menu.forEach(dayMeals => { dayMeals[mealName] = []; });
+                    menuWeights.forEach(dayWeights => { dayWeights[mealName] = []; });
+                    
+                    renderMenu();
+                } else if (e.key === 'Escape') {
+                    renderMenu();
+                }
+            });
+            
+            addMealTh.appendChild(input);
+            setTimeout(() => input.focus(), 0);
+        };
+
+        // Видалити прийом їжі
+        window.deleteMealType = function(mealName) {
+            if (!confirm(`Ви впевнені, що хочете видалити прийом їжі "${mealName}"?`)) return;
+            
+            mealTypes = mealTypes.filter(m => m !== mealName);
+            saveMealTypes();
+            
+            // Вилучити цей прийом з меню
+                    menu.forEach(dayMeals => { delete dayMeals[mealName]; });
+                    menuWeights.forEach(dayWeights => { delete dayWeights[mealName]; });
+            
+            renderMenu();
+        };
+
 
         function getSortedDishes() { return [...dishes].sort((a,b) => a.name.localeCompare(b.name, 'uk')); }
 
@@ -233,141 +400,92 @@
             return dish.ingredients.reduce((s, ing) => s + (Number(ing.quantity) || 0), 0);
         }
 
-        function createDishSelect(dayIdx, meal, selectedValue) {
+        function createDishSelect(dayIdx, meal) {
             const container = document.createElement('div');
             container.className = 'menu-dish-wrapper';
 
-            // Основний input (виглядає як select)
-            const selectBtn = document.createElement('button');
-            selectBtn.type = 'button';
-            selectBtn.className = 'menu-dish';
-            selectBtn.dataset.day = dayIdx;
-            selectBtn.dataset.meal = meal;
-            selectBtn.textContent = selectedValue || 'Виберіть страву';
-            selectBtn.setAttribute('aria-label', `${meal} день ${days[dayIdx]}`);
+            function renderCell() {
+                container.innerHTML = '';
 
-            // Контрольний рядок під селектом
-            const controls = document.createElement('div');
-            controls.className = 'weight-controls';
+                const listDiv = document.createElement('div');
+                listDiv.className = 'menu-dish-list';
+                const entries = menu[dayIdx][meal] || [];
 
-            // Мінус кнопка
-            const minusBtn = document.createElement('button');
-            minusBtn.type = 'button';
-            minusBtn.className = 'weight-btn';
-            minusBtn.textContent = '−';
-            minusBtn.title = 'Зменшити вагу на 100 г';
-            minusBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const cur = menuWeights[dayIdx][meal] ?? 0.1;
-                const nw = Math.max(0.1, +(cur - 0.1).toFixed(3));
-                menuWeights[dayIdx][meal] = nw;
-                updateWeightDisplay();
-                updateMenuTotalDishesPrice();
-                updateDailyCalories();
-            });
+                entries.forEach((item, idx) => {
+                    const itemRow = document.createElement('div');
+                    itemRow.className = 'menu-dish-row';
 
-            // Показник ваги (г)
-            const weightSpan = document.createElement('span');
-            weightSpan.className = 'weight-display';
+                    const nameSpan = document.createElement('div');
+                    nameSpan.className = 'menu-dish';
+                    nameSpan.textContent = item.name;
+                    nameSpan.title = item.name;
+                    nameSpan.style.flex = '1';
 
-            // Плюс кнопка
-            const plusBtn = document.createElement('button');
-            plusBtn.type = 'button';
-            plusBtn.className = 'weight-btn';
-            plusBtn.textContent = '+';
-            plusBtn.title = 'Збільшити вагу на 100 г';
-            plusBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const cur = menuWeights[dayIdx][meal] ?? 0.1;
-                const nw = +(cur + 0.1).toFixed(3);
-                menuWeights[dayIdx][meal] = nw;
-                updateWeightDisplay();
-                updateMenuTotalDishesPrice();
-                updateDailyCalories();
-            });
+                    const weightSpan = document.createElement('span');
+                    weightSpan.className = 'weight-display';
+                    weightSpan.textContent = `${Math.round((item.weight||0.1)*1000)} г`;
 
-            function updateWeightDisplay() {
-                const w = menuWeights[dayIdx][meal] ?? 0.1;
-                weightSpan.textContent = `${Math.round(w * 1000)} г`;
+                    const minus = document.createElement('button'); minus.className = 'weight-btn'; minus.textContent = '−';
+                    minus.addEventListener('click', (e)=>{ e.stopPropagation(); const cur = item.weight||0.1; item.weight = Math.max(0.1, +(cur-0.1).toFixed(3)); /* re-render to update totals */ renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
+                    const plus = document.createElement('button'); plus.className = 'weight-btn'; plus.textContent = '+';
+                    plus.addEventListener('click', (e)=>{ e.stopPropagation(); const cur = item.weight||0.1; item.weight = +(cur+0.1).toFixed(3); /* re-render to update totals */ renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
+
+                    const removeBtn = document.createElement('button'); removeBtn.className = 'clear-dish-btn'; removeBtn.innerHTML = '✕'; removeBtn.title = 'Видалити цю страву';
+                    removeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menu[dayIdx][meal].splice(idx,1); renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
+
+                    const controls = document.createElement('div'); controls.className = 'weight-controls';
+                    controls.appendChild(minus); controls.appendChild(weightSpan); controls.appendChild(plus);
+
+                    itemRow.appendChild(nameSpan);
+                    itemRow.appendChild(removeBtn);
+                    itemRow.appendChild(controls);
+                    listDiv.appendChild(itemRow);
+                });
+
+                // Add button
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button'; addBtn.className = 'add-meal-btn'; addBtn.textContent = '+'; addBtn.title = 'Додати страву';
+                addBtn.addEventListener('click', (e)=>{
+                    e.stopPropagation(); openPopup();
+                });
+
+                container.appendChild(listDiv);
+
+                // total weight for this meal cell
+                const totalWeight = entries.reduce((s,it) => s + (Number(it.weight) || 0), 0);
+                const totalDiv = document.createElement('div');
+                totalDiv.className = 'meal-total-weight';
+                totalDiv.textContent = `Загальна вага: ${Math.round(totalWeight * 1000)} г`;
+                container.appendChild(totalDiv);
+
+                container.appendChild(addBtn);
             }
-
-            // Ініціалізація ваги при наявній вибраній страві
-            if (menu[dayIdx][meal]) {
-                const dishObj = dishes.find(d => d.name === menu[dayIdx][meal]);
-                if (dishObj) {
-                    const base = getDishBaseQty(dishObj);
-                    if (menuWeights[dayIdx][meal] == null) menuWeights[dayIdx][meal] = base > 0 ? base : 0.1;
-                }
-            }
-            updateWeightDisplay();
-
-            // Збираємо контролси під селектом: мінус | вага | плюс
-            controls.appendChild(minusBtn);
-            controls.appendChild(weightSpan);
-            controls.appendChild(plusBtn);
-
-            // Додаємо селект і контролс у контейнер (вертикально)
-            container.appendChild(selectBtn);
-            container.appendChild(controls);
 
             let popup = null;
-
-            selectBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
+            function openPopup() {
                 if (popup) { popup.remove(); popup = null; return; }
                 popup = document.createElement('div'); popup.className = 'dish-select-popup';
-
-                const input = document.createElement('input');
-                input.type = 'text'; input.className = 'dish-search-input-popup';
-                input.placeholder = 'Пошук страви...'; input.autocomplete = 'off';
+                const input = document.createElement('input'); input.type='text'; input.className='dish-search-input-popup'; input.placeholder='Пошук страви...'; input.autocomplete='off';
                 popup.appendChild(input);
-
                 const ul = document.createElement('ul'); popup.appendChild(ul);
 
-                function fillList(filter = '') {
-                    ul.innerHTML = '';
-                    getSortedDishes()
-                        .filter(d => d.name.toLowerCase().includes(filter.toLowerCase()))
-                        .forEach(d => {
-                            const li = document.createElement('li');
-                            li.textContent = d.name;
-                            if (d.name === menu[dayIdx][meal]) li.classList.add('selected');
-                            li.style.whiteSpace = 'nowrap'; li.style.overflow = 'hidden'; li.style.textOverflow = 'ellipsis';
-                            li.addEventListener('mousedown', function(ev) {
-                                ev.preventDefault();
-                                selectBtn.textContent = d.name;
-                                menu[+dayIdx][meal] = d.name;
-                                const base = getDishBaseQty(d);
-                                menuWeights[dayIdx][meal] = base > 0 ? base : 0.1;
-                                updateWeightDisplay();
-                                updateMenuTotalDishesPrice();
-                                updateDailyCalories();
-                                popup.remove(); popup = null;
-                            });
-                            ul.appendChild(li);
-                        });
+                function fillList(filter=''){
+                    ul.innerHTML='';
+                    getSortedDishes().filter(d => d.name.toLowerCase().includes(filter.toLowerCase())).forEach(d => {
+                        const li = document.createElement('li'); li.textContent = d.name; li.style.whiteSpace='nowrap'; li.style.overflow='hidden'; li.style.textOverflow='ellipsis';
+                        li.addEventListener('mousedown', function(ev){ ev.preventDefault(); const base = getDishBaseQty(d); const w = base>0?base:0.1; menu[dayIdx][meal].push({ name: d.name, weight: w }); renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null; });
+                        ul.appendChild(li);
+                    });
                 }
-                fillList('');
-                input.addEventListener('input', function() { fillList(this.value); });
+                fillList(''); input.addEventListener('input', function(){ fillList(this.value); });
 
-                popup.style.position = 'absolute';
-                const btnRect = selectBtn.getBoundingClientRect();
-                popup.style.top = (btnRect.bottom + window.scrollY + 2) + 'px';
-                popup.style.left = (btnRect.left + window.scrollX) + 'px';
-                popup.style.width = selectBtn.offsetWidth + 'px';
-                document.body.appendChild(popup);
-
-                setTimeout(() => input.focus(), 0);
-
-                function closePopup(e) {
-                    if (!popup) return;
-                    if (!popup.contains(e.target) && e.target !== selectBtn) {
-                        popup.remove(); popup = null; document.removeEventListener('mousedown', closePopup);
-                    }
-                }
+                popup.style.position='absolute'; const rect = container.getBoundingClientRect(); popup.style.top = (rect.bottom + window.scrollY + 2) + 'px'; popup.style.left = (rect.left + window.scrollX) + 'px'; popup.style.width = '240px'; document.body.appendChild(popup);
+                setTimeout(()=>input.focus(),0);
+                function closePopup(e){ if(!popup) return; if(!popup.contains(e.target)) { popup.remove(); popup=null; document.removeEventListener('mousedown', closePopup); } }
                 document.addEventListener('mousedown', closePopup);
-            });
+            }
 
+            renderCell();
             return container;
         }
 
@@ -376,21 +494,206 @@
             const table = document.createElement('table'); table.className = 'menu-table';
             const thead = document.createElement('thead');
             const headRow = document.createElement('tr');
-            headRow.innerHTML = `<th>День</th>` + mealTypes.map(meal => `<th>${meal}</th>`).join('') + `<th>Калорійність (кКал)</th>`;
-            thead.appendChild(headRow); table.appendChild(thead);
+            
+            // Створюємо заголовок з днями та прийомами їжі
+            const dayTh = document.createElement('th');
+            dayTh.textContent = 'День';
+            headRow.appendChild(dayTh);
+            
+            let draggedMealIndex = null;
+
+            mealTypes.forEach((meal, mealIdx) => {
+                const th = document.createElement('th');
+                th.style.position = 'relative';
+                th.draggable = true;
+                th.className = 'meal-header';
+                th.dataset.mealIndex = mealIdx;
+                
+                const mealContainer = document.createElement('div');
+                mealContainer.className = 'meal-container';
+                mealContainer.style.display = 'flex';
+                mealContainer.style.alignItems = 'center';
+                mealContainer.style.justifyContent = 'center';
+                mealContainer.style.gap = '8px';
+                
+                const mealName = document.createElement('span');
+                mealName.className = 'meal-name-text';
+                mealName.textContent = meal;
+                mealName.style.pointerEvents = 'none';
+                mealContainer.appendChild(mealName);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '×';
+                deleteBtn.style.background = 'none';
+                deleteBtn.style.border = 'none';
+                deleteBtn.style.color = '#dc3545';
+                deleteBtn.style.fontSize = '1.5em';
+                deleteBtn.style.cursor = 'pointer';
+                deleteBtn.style.padding = '0 4px';
+                deleteBtn.style.lineHeight = '1';
+                deleteBtn.title = `Видалити прийом їжі "${meal}"`;
+                deleteBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    deleteMealType(meal);
+                };
+                deleteBtn.onmouseover = () => {
+                    deleteBtn.style.color = '#c82333';
+                };
+                deleteBtn.onmouseout = () => {
+                    deleteBtn.style.color = '#dc3545';
+                };
+                mealContainer.appendChild(deleteBtn);
+                
+                th.appendChild(mealContainer);
+
+                // Обробники drag and drop
+                th.addEventListener('dragstart', (e) => {
+                    draggedMealIndex = mealIdx;
+                    th.classList.add('dragging');
+                    // Зберігаємо оригінальний вміст і підставляємо порожній плейсхолдер
+                    th._originalHTML = th.innerHTML;
+                    th.innerHTML = '<div class="drag-placeholder" style="width:100%;height:100%"></div>';
+                    try { e.dataTransfer.setData('text/plain', 'drag'); } catch (ex) {}
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                th.addEventListener('dragend', (e) => {
+                    th.classList.remove('dragging');
+                    // Відновлюємо оригінальний вміст
+                    if (th._originalHTML !== undefined) {
+                        th.innerHTML = th._originalHTML;
+                        delete th._originalHTML;
+                    }
+                    document.querySelectorAll('.meal-header').forEach(el => {
+                        el.classList.remove('drag-over', 'right');
+                        el.style.transform = '';
+                    });
+                    draggedMealIndex = null;
+                });
+
+                th.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    
+                    if (draggedMealIndex !== null && draggedMealIndex !== mealIdx) {
+                        // Очищуємо всі попередні трансформації
+                        document.querySelectorAll('.meal-header').forEach(el => {
+                            el.classList.remove('drag-over', 'right');
+                            el.style.transform = '';
+                        });
+                        
+                        // Додаємо маркер до поточного елемента
+                        th.classList.add('drag-over');
+                        
+                        // Визначаємо напрямок й переміщуємо проміжні елементи
+                        const mealHeaders = Array.from(document.querySelectorAll('.meal-header')).filter(h => h.dataset.mealIndex !== undefined);
+                        const draggedHeader = mealHeaders.find(h => parseInt(h.dataset.mealIndex) === draggedMealIndex);
+                        const currentHeader = mealHeaders.find(h => parseInt(h.dataset.mealIndex) === mealIdx);
+                        
+                        if (!draggedHeader) return;
+                        
+                        const draggedPos = Array.from(mealHeaders).indexOf(draggedHeader);
+                        const currentPos = Array.from(mealHeaders).indexOf(currentHeader);
+                        
+                        if (draggedPos < currentPos) {
+                            // Перетягуємо вправо (елементи зліва від цілі зсуваються вліво)
+                            for (let i = draggedPos + 1; i <= currentPos; i++) {
+                                mealHeaders[i].style.transform = 'translateX(-80px)';
+                            }
+                        } else {
+                            // Перетягуємо вліво (елементи справа від цілі зсуваються вправо)
+                            for (let i = currentPos; i < draggedPos; i++) {
+                                mealHeaders[i].style.transform = 'translateX(80px)';
+                            }
+                        }
+                    }
+                });
+
+                th.addEventListener('dragleave', (e) => {
+                    th.classList.remove('drag-over', 'right');
+                    // Очищуємо трансформації при виході з элемента
+                    document.querySelectorAll('.meal-header:not([style*="display: none"])').forEach(el => {
+                        el.style.transform = '';
+                    });
+                });
+
+                th.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (draggedMealIndex !== null && draggedMealIndex !== mealIdx) {
+                        // Вилучаємо elementos з драганої позиції та вставляємо на нову
+                        const draggedMeal = mealTypes[draggedMealIndex];
+                        mealTypes.splice(draggedMealIndex, 1);
+                        
+                        // Обчислюємо позицію для вставки (враховуючи, що масив зменшився)
+                        let insertIdx = mealIdx;
+                        if (draggedMealIndex < mealIdx) {
+                            insertIdx = mealIdx - 1;
+                        }
+                        
+                        mealTypes.splice(insertIdx, 0, draggedMeal);
+                        
+                        saveMealTypes();
+                        renderMenu();
+                    }
+                    th.classList.remove('drag-over');
+                });
+
+                headRow.appendChild(th);
+            });
+            
+            // Додаємо кнопку + для додавання нового прийому
+            const addMealTh = document.createElement('th');
+            const addMealBtn = document.createElement('button');
+            addMealBtn.className = 'add-meal-btn';
+            addMealBtn.textContent = '+';
+            addMealBtn.title = 'Додати новий прийом їжі';
+            addMealBtn.onclick = (e) => {
+                e.preventDefault();
+                window.addNewMealColumn();
+            };
+            addMealTh.appendChild(addMealBtn);
+            headRow.appendChild(addMealTh);
+            
+            // Додаємо заголовок для калорійності та загальної ваги дня
+            const calTh = document.createElement('th');
+            calTh.className = 'calories-column';
+            calTh.textContent = 'Калорійність (кКал)';
+            headRow.appendChild(calTh);
+
+            const weightDayTh = document.createElement('th');
+            weightDayTh.className = 'calories-column';
+            weightDayTh.textContent = 'Загальна вага дня';
+            headRow.appendChild(weightDayTh);
+            
+            thead.appendChild(headRow); 
+            table.appendChild(thead);
 
             const tbody = document.createElement('tbody');
             days.forEach((day, dayIdx) => {
                 const row = document.createElement('tr');
-                const tdDay = document.createElement('td'); tdDay.innerHTML = `<strong>${day}</strong>`; row.appendChild(tdDay);
+                const tdDay = document.createElement('td'); 
+                tdDay.innerHTML = `<strong>${day}</strong>`; 
+                row.appendChild(tdDay);
+                
                 mealTypes.forEach(meal => {
                     const td = document.createElement('td');
-                    td.appendChild(createDishSelect(dayIdx, meal, menu[dayIdx][meal]));
+                    td.appendChild(createDishSelect(dayIdx, meal));
                     row.appendChild(td);
                 });
+                
                 const caloriesTd = document.createElement('td');
-                caloriesTd.id = `cal-${dayIdx}`; caloriesTd.textContent = '0.0';
+                caloriesTd.className = 'calories-column';
+                caloriesTd.id = `cal-${dayIdx}`; 
+                caloriesTd.textContent = '0.0';
                 row.appendChild(caloriesTd);
+
+                const weightDayTd = document.createElement('td');
+                weightDayTd.className = 'calories-column';
+                weightDayTd.id = `weight-${dayIdx}`;
+                weightDayTd.textContent = '0 г';
+                row.appendChild(weightDayTd);
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
@@ -398,7 +701,8 @@
 
             if (!document.getElementById('menuTotalDishesPrice')) {
                 const priceDiv = document.createElement('div');
-                priceDiv.id = 'menuTotalDishesPrice'; priceDiv.style = 'font-weight:bold; margin:10px 0;';
+                priceDiv.id = 'menuTotalDishesPrice'; 
+                priceDiv.style = 'font-weight:bold; margin:10px 0;';
                 menuDiv.parentNode.insertBefore(priceDiv, menuDiv.nextSibling);
             }
 
@@ -426,26 +730,32 @@
         function updateDailyCalories() {
             days.forEach((day, idx) => {
                 let dayTotal = 0;
+                let dayWeight = 0;
                 mealTypes.forEach(meal => {
-                    const dishName = menu[idx][meal]; if (!dishName) return;
-                    const dish = dishes.find(d => d.name === dishName);
-                    if (dish) {
-                        const w = menuWeights[idx][meal] ?? getDishBaseQty(dish) ?? 0.1;
-                        dayTotal += calculateDishCalories(dish, w);
-                    }
+                    const entries = menu[idx][meal];
+                    if (!entries || !entries.length) return;
+                    entries.forEach(item => {
+                        const dish = dishes.find(d => d.name === item.name);
+                        if (dish) {
+                            const w = item.weight ?? getDishBaseQty(dish) ?? 0.1;
+                            dayTotal += calculateDishCalories(dish, w);
+                            dayWeight += Number(w) || 0;
+                        }
+                    });
                 });
                 const el = document.getElementById(`cal-${idx}`); if (el) el.textContent = dayTotal.toFixed(1);
+                const wt = document.getElementById(`weight-${idx}`); if (wt) wt.textContent = `${Math.round(dayWeight * 1000)} г`;
             });
         }
 
         function updateMenuTotalDishesPrice() {
             let total = 0; const selected = [];
-            menu.forEach((dayObj, dayIdx) => mealTypes.forEach(meal => { if (dayObj[meal]) selected.push({ name: dayObj[meal], dayIdx, meal }); }));
+            menu.forEach((dayObj, dayIdx) => mealTypes.forEach(meal => { const entries = dayObj[meal] || []; entries.forEach(item => selected.push({ name: item.name, dayIdx, meal, weight: item.weight })); }));
             selected.forEach(item => {
                 const dish = dishes.find(d => d.name === item.name);
                 if (dish && dish.totalPrice) {
                     const baseQty = getDishBaseQty(dish);
-                    const w = menuWeights[item.dayIdx][item.meal] ?? (baseQty > 0 ? baseQty : 1);
+                    const w = item.weight ?? (baseQty > 0 ? baseQty : 1);
                     const factor = baseQty > 0 ? (w / baseQty) : 1;
                     total += Number(dish.totalPrice) * factor;
                 }
@@ -468,9 +778,11 @@
 
         window.generateShoppingList = function() {
             const menuDishes = [];
-            menu.forEach((dayObj, dayIdx) => mealTypes.forEach(meal => { if (dayObj[meal]) menuDishes.push({ name: dayObj[meal], dayIdx, meal }); }));
+            menu.forEach((dayObj, dayIdx) => mealTypes.forEach(meal => { const entries = dayObj[meal] || []; entries.forEach(item => menuDishes.push({ name: item.name, dayIdx, meal, weight: item.weight })); }));
             const err = document.getElementById('menuError');
-            if (menuDishes.length < 7 * 4) {
+            // simple validation: require at least one dish per meal per day
+            const requiredCount = days.length * Math.max(1, mealTypes.length);
+            if (menuDishes.length < requiredCount) {
                 err.textContent = 'Не заповнено всі дні!';
                 err.style.display = 'block';
             } else {
@@ -489,7 +801,7 @@
                 const dish = dishes.find(d => d.name === item.name);
                 if (!dish) return; // пропустити, якщо страва не знайдена
                 const baseQty = getDishBaseQty(dish);
-                const w = menuWeights[item.dayIdx][item.meal] ?? (baseQty > 0 ? baseQty : 0.1);
+                const w = item.weight ?? (baseQty > 0 ? baseQty : 0.1);
                 const factor = baseQty > 0 ? (w / baseQty) : 1;
                 dish.ingredients.forEach(ing => {
                     if (!shopping[ing.name]) shopping[ing.name] = { quantity: 0, price: 0 };

@@ -87,6 +87,19 @@
             ingredients = ingredientsSnap.docs.map(doc => doc.data());
             ingredientsDocs = ingredientsSnap.docs.map(doc => doc.id);
 
+            // populate datalist for simple autocomplete suggestions
+            try {
+                const dl = document.getElementById('ingredientsDatalist');
+                if (dl) {
+                    dl.innerHTML = '';
+                    ingredients.forEach(ing => {
+                        const opt = document.createElement('option');
+                        opt.value = ing.name;
+                        dl.appendChild(opt);
+                    });
+                }
+            } catch (e) {}
+
             const dishesSnap = await getDocs(collection(db, "dishes"));
             dishes = dishesSnap.docs.map(doc => doc.data());
 
@@ -160,6 +173,8 @@
             document.getElementById('ingredientError').style.display = 'none';
         }
 
+        
+
         window.deleteIngredient = async function(index) {
             const ingredientName = ingredients[index].name;
             const isUsed = dishes.some(dish => dish.ingredients.some(ing => ing.name === ingredientName));
@@ -217,7 +232,8 @@
         <div class="section">
             <h2>Додати/Редагувати інгредієнт</h2>
             <div class="ingredient-form">
-                <input type="text" id="ingredientName" placeholder="Назва інгредієнта">
+                <input type="text" id="ingredientName" placeholder="Назва інгредієнта" list="ingredientsDatalist">
+                <datalist id="ingredientsDatalist"></datalist>
                 <input type="number" id="ingredientPrice" placeholder="Ціна за кг (необов’язково)" min="0" step="0.01">
                 <input type="number" id="ingredientKcal" placeholder="Калорійність (кКал)" min="0" step="0.1" required>
                 <button onclick="saveIngredient()">Зберегти інгредієнт</button>
