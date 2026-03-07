@@ -96,6 +96,12 @@
         let ingredientsDocs = [];
         let dishes = [];
         let editingIndex = null;
+        let debounceTimer;
+
+        function debouncedRender() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => renderIngredientList(), 300);
+        }
 
         async function loadData() {
             const ingredientsSnap = await getDocs(collection(db, "ingredients"));
@@ -209,7 +215,12 @@
             ingredientList.innerHTML = '';
             const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
             const searchQuery = document.getElementById('ingredientSearch').value.toLowerCase();
-            const filteredIngredients = sortedIngredients.filter(ing => ing.name.toLowerCase().includes(searchQuery));
+            const filteredIngredients = sortedIngredients.filter(ing => {
+                const query = searchQuery.toLowerCase();
+                return ing.name.toLowerCase().includes(query) ||
+                       (ing.price && ing.price.toString().includes(query)) ||
+                       (ing.kcal !== undefined && ing.kcal.toString().includes(query));
+            });
             filteredIngredients.forEach((ing, index) => {
                 const realIndex = ingredients.findIndex(i => i.name === ing.name);
                 const item = document.createElement('div');
@@ -223,9 +234,6 @@
                 `;
                 ingredientList.appendChild(item);
             });
-        }
-        function filterIngredients() {
-            renderIngredientList();
         }
 
         function toggleSidebar() {
@@ -270,7 +278,7 @@
             <p id="ingredientError" class="error">Введіть назву інгредієнта!</p>
         </div>
             <h2>Усі інгредієнти</h2>
-            <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." oninput="renderIngredientList()" style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." oninput="debouncedRender()" style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             <div id="ingredientList" class="ingredient-list"></div>
     </div>
 </body>
