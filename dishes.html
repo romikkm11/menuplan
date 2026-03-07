@@ -524,7 +524,7 @@
                                                 <div style="position: relative;">
                                                     <input type="text" placeholder="Назва" value="${ing.name}" 
                                                         onchange="updateVariationIngredientField(${idx}, 'name', this.value)" 
-                                                        onfocus="showIngredientPopup(this, ${idx})" autocomplete="off">
+                                                        autocomplete="off">
                                                     <div class="ingredient-select-popup" style="display: none;"></div>
                                                 </div>
                                                 <input type="number" placeholder="Кількість" min="0" step="0.001" value="${ing.quantity}" onchange="updateVariationIngredientField(${idx}, 'quantity', this.value)">
@@ -537,6 +537,11 @@
                                                 <button type="button" onclick="removeVariationIngredientRow(${idx})">✕</button>
                                             `;
                                             container.appendChild(row);
+                                            // Додаємо автопідтягування для variation-інгредієнтів
+                                            const input = row.querySelector('input[type="text"]');
+                                            input.addEventListener('focus', function() {
+                                                showIngredientPopup(input, idx);
+                                            });
                                         });
                                     }
                                     // Викликаємо renderVariationIngredientInputs при редагуванні варіації
