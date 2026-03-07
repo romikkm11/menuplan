@@ -476,7 +476,7 @@
                     ul.innerHTML='';
                     getSortedDishes().filter(d => d.name.toLowerCase().includes(filter.toLowerCase())).forEach(d => {
                         const li = document.createElement('li'); li.textContent = d.name; li.style.whiteSpace='nowrap'; li.style.overflow='hidden'; li.style.textOverflow='ellipsis';
-                        li.addEventListener('mousedown', function(ev){
+                        li.addEventListener('click', function(ev){
                             ev.preventDefault();
                             if (d.variations && d.variations.length > 0) {
                                 // Show variation selection popup
