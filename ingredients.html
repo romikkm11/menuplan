@@ -228,46 +228,11 @@
             renderIngredientList();
         }
 
-        function showIngredientSearchPopup() {
-            const input = document.getElementById('ingredientSearch');
-            const popup = document.getElementById('ingredientSearchPopup');
-            const query = input.value.toLowerCase();
-            if (query === '') {
-                popup.style.display = 'none';
-                return;
-            }
-            popup.innerHTML = '<ul></ul>';
-            const ul = popup.querySelector('ul');
-            const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name));
-            const filtered = sortedIngredients.filter(ing => ing.name.toLowerCase().includes(query));
-            filtered.forEach(ing => {
-                const li = document.createElement('li');
-                li.textContent = ing.name;
-                li.addEventListener('click', () => {
-                    // Scroll to the ingredient in the list
-                    const ingredientItems = document.querySelectorAll('.ingredient-item');
-                    const target = Array.from(ingredientItems).find(item => item.querySelector('div').textContent.startsWith(ing.name));
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth' });
-                    }
-                    popup.style.display = 'none';
-                    input.value = '';
-                    renderIngredientList(); // Re-render to clear search
-                });
-                ul.appendChild(li);
-            });
-            if (filtered.length > 0) {
-                popup.style.display = 'block';
-                // Position the popup below the input
-                const inputRect = input.getBoundingClientRect();
-                const containerRect = input.parentElement.getBoundingClientRect();
-                popup.style.position = 'absolute';
-                popup.style.top = (inputRect.bottom - containerRect.top + 2) + 'px';
-                popup.style.left = (inputRect.left - containerRect.left) + 'px';
-                popup.style.width = inputRect.width + 'px';
-            } else {
-                popup.style.display = 'none';
-            }
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
         }
 
         window.onload = loadData;
@@ -304,14 +269,9 @@
             </div>
             <p id="ingredientError" class="error">Введіть назву інгредієнта!</p>
         </div>
-        <div class="section">
             <h2>Усі інгредієнти</h2>
-            <div style="position: relative;">
-                <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." oninput="showIngredientSearchPopup()" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                <div id="ingredientSearchPopup" class="ingredient-select-popup" style="display: none;"></div>
-            </div>
+            <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." oninput="renderIngredientList()" style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             <div id="ingredientList" class="ingredient-list"></div>
-        </div>
     </div>
 </body>
 </html>
