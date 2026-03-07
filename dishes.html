@@ -79,6 +79,7 @@
             if (user) {
                 document.getElementById('authBlock').style.display = 'none';
                 document.getElementById('logoutBtn').style.display = 'inline';
+                loadData();
             } else {
                 document.getElementById('authBlock').style.display = 'block';
                 document.getElementById('logoutBtn').style.display = 'none';
@@ -294,7 +295,12 @@
             dishList.innerHTML = '';
             const sortedDishes = [...dishes].sort((a, b) => a.name.localeCompare(b.name));
             const searchQuery = document.getElementById('dishSearch').value.toLowerCase();
-            const filteredDishes = sortedDishes.filter(dish => dish.name.toLowerCase().includes(searchQuery));
+            const filteredDishes = sortedDishes.filter(dish => {
+                const query = searchQuery.toLowerCase();
+                return dish.name.toLowerCase().includes(query) ||
+                       dish.ingredients.some(ing => ing.name.toLowerCase().includes(query)) ||
+                       (dish.totalPrice && dish.totalPrice.toString().includes(query));
+            });
             filteredDishes.forEach((dish, index) => {
                 const realIndex = dishes.findIndex(i => i.name === dish.name);
                 const item = document.createElement('div');
@@ -317,52 +323,6 @@
                 dishList.appendChild(item);
             });
         }
-        function filterDishes() {
-            renderDishList();
-        }
-
-        function showDishSearchPopup() {
-            const input = document.getElementById('dishSearch');
-            const popup = document.getElementById('dishSearchPopup');
-            const query = input.value.toLowerCase();
-            if (query === '') {
-                popup.style.display = 'none';
-                return;
-            }
-            popup.innerHTML = '<ul></ul>';
-            const ul = popup.querySelector('ul');
-            const sortedDishes = [...dishes].sort((a, b) => a.name.localeCompare(b.name));
-            const filtered = sortedDishes.filter(d => d.name.toLowerCase().includes(query));
-            filtered.forEach(d => {
-                const li = document.createElement('li');
-                li.textContent = d.name;
-                li.addEventListener('click', () => {
-                    // Scroll to the dish in the list
-                    const dishItems = document.querySelectorAll('.dish-item');
-                    const target = Array.from(dishItems).find(item => item.querySelector('strong').textContent === d.name);
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth' });
-                    }
-                    popup.style.display = 'none';
-                    input.value = '';
-                    renderDishList(); // Re-render to clear search
-                });
-                ul.appendChild(li);
-            });
-            if (filtered.length > 0) {
-                popup.style.display = 'block';
-                // Position the popup below the input
-                const inputRect = input.getBoundingClientRect();
-                const containerRect = input.parentElement.getBoundingClientRect();
-                popup.style.position = 'absolute';
-                popup.style.top = (inputRect.bottom - containerRect.top + 2) + 'px';
-                popup.style.left = (inputRect.left - containerRect.left) + 'px';
-                popup.style.width = inputRect.width + 'px';
-            } else {
-                popup.style.display = 'none';
-            }
-        }
-
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const content = document.getElementById('content');
@@ -370,7 +330,9 @@
             content.classList.toggle('collapsed');
         }
 
-        window.onload = loadData;
+        window.onload = function() {
+            document.getElementById('dishSearch').addEventListener('input', renderDishList);
+        };
     </script>
 </head>
 <body>
@@ -407,8 +369,7 @@
         <div class="section">
             <h2>Усі страви</h2>
             <div style="position: relative;">
-                <input type="text" id="dishSearch" placeholder="Пошук страв..." oninput="showDishSearchPopup()" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
-                <div id="dishSearchPopup" class="dish-select-popup" style="display: none;"></div>
+                <input type="text" id="dishSearch" placeholder="Пошук страв..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
             </div>
             <div id="dishList" class="dish-list"></div>
         </div>
