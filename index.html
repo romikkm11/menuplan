@@ -504,6 +504,7 @@
                 id: Date.now(),
                 date: now.toLocaleDateString('uk-UA'),
                 time: now.toLocaleTimeString('uk-UA'),
+                customName: `${now.toLocaleDateString('uk-UA')} ${now.toLocaleTimeString('uk-UA')}`,
                 menu: JSON.parse(JSON.stringify(menu)), // глибока копія
                 menuWeights: JSON.parse(JSON.stringify(menuWeights)),
                 mealTypes: [...mealTypes]

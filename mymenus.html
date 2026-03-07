@@ -84,6 +84,14 @@
 
         .menu-details { display: none; }
         .menu-details.show { display: block; }
+
+        .menu-header { display: flex; align-items: center; justify-content: space-between; }
+        .menu-title { display: flex; align-items: center; }
+        .menu-title h3 { margin: 0; margin-right: 10px; }
+        .edit-icon { cursor: pointer; font-size: 1.2em; margin-left: 5px; }
+        .toggle-arrow { cursor: pointer; font-size: 1.5em; margin-left: auto; }
+        .menu-date { position: absolute; bottom: 10px; right: 20px; font-size: 0.9em; color: #666; }
+        .menu-actions { margin-top: 10px; }
     </style>
     </style>
 
@@ -163,7 +171,42 @@
         // Перемкнути відображення деталей меню
         window.toggleMenuDetails = function(idx) {
             const detailsDiv = document.getElementById(`menu-details-${idx}`);
-            detailsDiv.classList.toggle('show');
+            const arrow = document.getElementById(`toggle-arrow-${idx}`);
+            if (detailsDiv.classList.contains('show')) {
+                detailsDiv.classList.remove('show');
+                arrow.textContent = '▼';
+            } else {
+                detailsDiv.classList.add('show');
+                arrow.textContent = '▲';
+            }
+        };
+
+        // Редагувати назву меню
+        window.editMenuName = function(idx) {
+            const titleEl = document.getElementById(`menu-title-${idx}`);
+            const currentName = savedMenus[idx].customName || savedMenus[idx].date + ' ' + savedMenus[idx].time;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentName;
+            input.style.width = '300px';
+            input.style.marginRight = '10px';
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Зберегти';
+            saveBtn.onclick = async function() {
+                savedMenus[idx].customName = input.value.trim() || currentName;
+                await saveSavedMenus();
+                renderSavedMenus();
+            };
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Скасувати';
+            cancelBtn.onclick = function() {
+                renderSavedMenus();
+            };
+            titleEl.innerHTML = '';
+            titleEl.appendChild(input);
+            titleEl.appendChild(saveBtn);
+            titleEl.appendChild(cancelBtn);
+            input.focus();
         };
 
         // Відобразити збережені меню
@@ -177,11 +220,19 @@
             savedMenus.forEach((saved, idx) => {
                 const menuDiv = document.createElement('div');
                 menuDiv.className = 'section';
+                menuDiv.style.position = 'relative';
                 menuDiv.innerHTML = `
-                    <h3>Меню від ${saved.date} ${saved.time}</h3>
-                    <button onclick="toggleMenuDetails(${idx})">Переглянути меню</button>
-                    <button onclick="loadSavedMenu(${idx})">Використати знову</button>
-                    <button onclick="deleteSavedMenu(${idx})">Видалити</button>
+                    <div class="menu-header">
+                        <div class="menu-title">
+                            <h3 id="menu-title-${idx}">${saved.customName || saved.date + ' ' + saved.time}</h3>
+                            <span class="edit-icon" onclick="editMenuName(${idx})">✏️</span>
+                        </div>
+                        <span class="toggle-arrow" id="toggle-arrow-${idx}" onclick="toggleMenuDetails(${idx})">▼</span>
+                    </div>
+                    <div class="menu-actions">
+                        <button onclick="loadSavedMenu(${idx})">Використати знову</button>
+                        <button onclick="deleteSavedMenu(${idx})">Видалити</button>
+                    </div>
                     <div class="menu-details" id="menu-details-${idx}">
                         <table class="menu-table">
                             <thead>
@@ -204,6 +255,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="menu-date">${saved.date} ${saved.time}</div>
                 `;
                 listDiv.appendChild(menuDiv);
             });
