@@ -332,8 +332,48 @@
             });
                 // Додаємо функцію для створення варіації
                 window.addVariation = function(index) {
+                                    window.saveVariation = async function() {
+                                        const note = document.getElementById('variationNote').value.trim();
+                                        const name = document.getElementById('dishName').value.trim();
+                                        const totalPrice = parseFloat(document.getElementById('dishTotalPrice').value) || 0;
+                                        const ingredientsArr = currentIngredients
+                                            .map(ing => ({
+                                                name: ing.name.trim(),
+                                                quantity: parseFloat(ing.quantity) || 0,
+                                                unit: ing.unit || 'кг'
+                                            }))
+                                            .filter(ing => ing.name && ing.quantity > 0);
+                                        const allExist = ingredientsArr.every(ing => ingredients.some(i => i.name === ing.name));
+                                        if (!name || !Array.isArray(ingredientsArr) || ingredientsArr.length === 0 || !allExist) {
+                                            document.getElementById('dishError').textContent = 'Введіть назву і хоча б один існуючий інгредієнт!';
+                                            document.getElementById('dishError').style.display = 'block';
+                                            return;
+                                        }
+                                        document.getElementById('dishError').style.display = 'none';
+                                        const dishId = dishesDocs[window._variationDishIndex];
+                                        const mainDishDoc = await getDoc(doc(db, "dishes", dishId));
+                                        let mainDish = mainDishDoc.data();
+                                        if (!mainDish.variations) mainDish.variations = [];
+                                        mainDish.variations.push({
+                                            name,
+                                            ingredients: ingredientsArr,
+                                            totalPrice,
+                                            note
+                                        });
+                                        await setDoc(doc(db, "dishes", dishId), mainDish);
+                                        document.getElementById('dishName').value = '';
+                                        document.getElementById('dishTotalPrice').value = '';
+                                        currentIngredients = [];
+                                        renderIngredientInputs();
+                                        document.getElementById('cancelEditBtn').style.display = 'none';
+                                        document.getElementById('variationBlock').style.display = 'none';
+                                        document.getElementById('saveDishBtn').style.display = 'inline';
+                                        editingIndex = null;
+                                        window._variationDishIndex = null;
+                                        await loadData();
+                                    };
                     const dish = dishes[index];
-                    document.getElementById('dishName').value = dish.name + ' (варіація)';
+                    document.getElementById('dishName').value = dish.name;
                     document.getElementById('dishTotalPrice').value = dish.totalPrice || '';
                     currentIngredients = dish.ingredients.map(ing => ({
                         name: ing.name,
@@ -342,7 +382,10 @@
                     }));
                     renderIngredientInputs();
                     document.getElementById('cancelEditBtn').style.display = 'inline';
-                    editingIndex = null; // Створюємо нову страву, не редагуємо існуючу
+                    editingIndex = null;
+                    document.getElementById('variationBlock').style.display = 'block';
+                    document.getElementById('saveDishBtn').style.display = 'none';
+                    window._variationDishIndex = index;
                 };
         }
         window.toggleDishDetails = function(header) {
@@ -388,8 +431,12 @@
                 <input type="number" id="dishTotalPrice" placeholder="Орієнтовна вартість страви (грн)" min="0" step="0.01">
                 <div id="ingredientInputs"></div>
                 <button type="button" onclick="addIngredientRow()">Додати інгредієнт</button>
-                <button onclick="saveDish()">Зберегти страву</button>
+                <button onclick="saveDish()" id="saveDishBtn">Зберегти страву</button>
                 <button onclick="cancelEdit()" id="cancelEditBtn" style="display: none;">Скасувати</button>
+                <div id="variationBlock" style="display:none; margin-top:10px;">
+                    <input type="text" id="variationNote" placeholder="Примітка до варіації" style="width:95%;">
+                    <button onclick="saveVariation()" id="saveVariationBtn" style="background-color:#ffc107;color:#333;">Зберегти варіацію</button>
+                </div>
             </div>
             <p id="dishError" class="error">Введіть назву і хоча б один існуючий інгредієнт!</p>
         </div>
