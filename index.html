@@ -476,7 +476,40 @@
                     ul.innerHTML='';
                     getSortedDishes().filter(d => d.name.toLowerCase().includes(filter.toLowerCase())).forEach(d => {
                         const li = document.createElement('li'); li.textContent = d.name; li.style.whiteSpace='nowrap'; li.style.overflow='hidden'; li.style.textOverflow='ellipsis';
-                        li.addEventListener('mousedown', function(ev){ ev.preventDefault(); const base = getDishBaseQty(d); const w = base>0?base:0.1; menu[dayIdx][meal].push({ name: d.name, weight: w }); renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null; });
+                        li.addEventListener('mousedown', function(ev){
+                            ev.preventDefault();
+                            if (d.variations && d.variations.length > 0) {
+                                // Show variation selection popup
+                                ul.innerHTML = '';
+                                const classicBtn = document.createElement('button');
+                                classicBtn.textContent = 'Класичний рецепт';
+                                classicBtn.className = 'action-btn';
+                                classicBtn.style.marginBottom = '8px';
+                                classicBtn.addEventListener('click', function() {
+                                    const base = getDishBaseQty(d); const w = base>0?base:0.1;
+                                    menu[dayIdx][meal].push({ name: d.name, weight: w });
+                                    renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
+                                });
+                                ul.appendChild(classicBtn);
+                                d.variations.forEach((v, vIdx) => {
+                                    const varBtn = document.createElement('button');
+                                    varBtn.textContent = v.note || 'Без примітки';
+                                    varBtn.className = 'action-btn';
+                                    varBtn.style.marginBottom = '8px';
+                                    varBtn.addEventListener('click', function() {
+                                        // Add variation to menu
+                                        const w = getDishBaseQty(v) > 0 ? getDishBaseQty(v) : 0.1;
+                                        menu[dayIdx][meal].push({ name: d.name + ' (' + (v.note || 'варіація') + ')', weight: w });
+                                        renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
+                                    });
+                                    ul.appendChild(varBtn);
+                                });
+                                return;
+                            }
+                            const base = getDishBaseQty(d); const w = base>0?base:0.1;
+                            menu[dayIdx][meal].push({ name: d.name, weight: w });
+                            renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
+                        });
                         ul.appendChild(li);
                     });
                 }
