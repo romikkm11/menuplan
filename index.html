@@ -803,10 +803,18 @@
                     const entries = menu[idx][meal];
                     if (!entries || !entries.length) return;
                     entries.forEach(item => {
-                        const dish = dishes.find(d => d.name === item.name);
-                        if (dish) {
-                            const w = item.weight ?? getDishBaseQty(dish) ?? 0.1;
-                            dayTotal += calculateDishCalories(dish, w);
+                        let dish = dishes.find(d => item.name.startsWith(d.name));
+                        let variation = null;
+                        if (dish && dish.variations && item.name.includes('(')) {
+                            const noteMatch = item.name.match(/\(([^)]+)\)/);
+                            if (noteMatch) {
+                                variation = dish.variations.find(v => (v.note || 'варіація') === noteMatch[1]);
+                            }
+                        }
+                        const usedDish = variation || dish;
+                        if (usedDish) {
+                            const w = item.weight ?? getDishBaseQty(usedDish) ?? 0.1;
+                            dayTotal += calculateDishCalories(usedDish, w);
                             dayWeight += Number(w) || 0;
                         }
                     });
