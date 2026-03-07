@@ -37,6 +37,25 @@
         .ingredient-row button { background: #dc3545; color: #fff; padding: 4px 10px; font-size: 1em; }
         .ingredient-row button:hover { background: #c82333; }
         .ingredient-row datalist { max-height: 100px; overflow-y: auto; }
+
+        .dish-search-input-popup{
+            width: 95%; padding: 5px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;
+            display: block;
+        }
+        .dish-select-popup {
+            position: absolute;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            padding: 8px;
+            min-width: 220px;
+            max-width: 350px;
+        }
+        .dish-select-popup ul { list-style: none; margin: 0; padding: 0; max-height: 200px; overflow-y: auto; }
+        .dish-select-popup li { padding: 6px 8px; cursor: pointer; border-radius: 4px; }
+        .dish-select-popup li.selected, .dish-select-popup li:hover { background: #e9ecef; }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -119,11 +138,13 @@
             currentIngredients.forEach((ing, idx) => {
                 const row = document.createElement('div');
                 row.className = 'ingredient-row';
-                // Список назв інгредієнтів для автодоповнення
                 row.innerHTML = `
-                    <input type="text" placeholder="Назва" list="ingredientList" value="${ing.name}" 
-                        onchange="updateIngredientField(${idx}, 'name', this.value)" 
-                        oninput="validateIngredientInput(this, ${idx})">
+                    <div style="position: relative;">
+                        <input type="text" placeholder="Назва" value="${ing.name}" 
+                            onchange="updateIngredientField(${idx}, 'name', this.value)" 
+                            onfocus="showIngredientPopup(this, ${idx})" autocomplete="off">
+                        <div class="ingredient-select-popup" style="display: none;"></div>
+                    </div>
                     <input type="number" placeholder="Кількість" min="0" step="0.001" value="${ing.quantity}" onchange="updateIngredientField(${idx}, 'quantity', this.value)">
                     <select onchange="updateIngredientField(${idx}, 'unit', this.value)">
                         <option value="кг" ${ing.unit === 'кг' ? 'selected' : ''}>кг</option>
@@ -135,16 +156,55 @@
                 `;
                 container.appendChild(row);
             });
-            // Додаємо datalist для автодоповнення (один раз на сторінку)
-            if (!document.getElementById('ingredientList')) {
-                const datalist = document.createElement('datalist');
-                datalist.id = 'ingredientList';
-                datalist.innerHTML = ingredients.map(i => `<option value="${i.name}">`).join('');
-                document.body.appendChild(datalist);
-            } else {
-                // Оновити datalist якщо змінився список інгредієнтів
-                document.getElementById('ingredientList').innerHTML = ingredients.map(i => `<option value="${i.name}">`).join('');
+        }
+
+        function showIngredientPopup(input, idx) {
+            const container = input.parentElement;
+            let popup = container.querySelector('.ingredient-select-popup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.className = 'ingredient-select-popup';
+                container.appendChild(popup);
             }
+            
+            const inputRect = input.getBoundingClientRect();
+            popup.style.position = 'absolute';
+            popup.style.top = (inputRect.bottom + window.scrollY - container.getBoundingClientRect().top + 2) + 'px';
+            popup.style.left = (inputRect.left - container.getBoundingClientRect().left) + 'px';
+            popup.style.width = inputRect.width + 'px';
+            
+            function fillPopup(filter = '') {
+                popup.innerHTML = '';
+                const ul = document.createElement('ul');
+                ingredients.filter(ing => ing.name.toLowerCase().includes(filter.toLowerCase())).forEach(ing => {
+                    const li = document.createElement('li');
+                    li.textContent = ing.name;
+                    li.style.whiteSpace = 'nowrap';
+                    li.style.overflow = 'hidden';
+                    li.style.textOverflow = 'ellipsis';
+                    li.addEventListener('mousedown', function(ev) {
+                        ev.preventDefault();
+                        input.value = ing.name;
+                        updateIngredientField(idx, 'name', ing.name);
+                        popup.style.display = 'none';
+                        document.removeEventListener('mousedown', closePopup);
+                    });
+                    ul.appendChild(li);
+                });
+                popup.appendChild(ul);
+                popup.style.display = ul.children.length > 0 ? 'block' : 'none';
+            }
+            
+            fillPopup('');
+            input.addEventListener('input', function() { fillPopup(this.value); });
+            
+            function closePopup(e) {
+                if (!popup.contains(e.target) && e.target !== input) {
+                    popup.style.display = 'none';
+                    document.removeEventListener('mousedown', closePopup);
+                }
+            }
+            document.addEventListener('mousedown', closePopup);
         }
 
         // Забороняємо додавати інгредієнт, якого немає у списку
@@ -233,7 +293,9 @@
             const dishList = document.getElementById('dishList');
             dishList.innerHTML = '';
             const sortedDishes = [...dishes].sort((a, b) => a.name.localeCompare(b.name));
-            sortedDishes.forEach((dish, index) => {
+            const searchQuery = document.getElementById('dishSearch').value.toLowerCase();
+            const filteredDishes = sortedDishes.filter(dish => dish.name.toLowerCase().includes(searchQuery));
+            filteredDishes.forEach((dish, index) => {
                 const realIndex = dishes.findIndex(i => i.name === dish.name);
                 const item = document.createElement('div');
                 item.className = 'dish-item';
@@ -254,6 +316,51 @@
                 `;
                 dishList.appendChild(item);
             });
+        }
+        function filterDishes() {
+            renderDishList();
+        }
+
+        function showDishSearchPopup() {
+            const input = document.getElementById('dishSearch');
+            const popup = document.getElementById('dishSearchPopup');
+            const query = input.value.toLowerCase();
+            if (query === '') {
+                popup.style.display = 'none';
+                return;
+            }
+            popup.innerHTML = '<ul></ul>';
+            const ul = popup.querySelector('ul');
+            const sortedDishes = [...dishes].sort((a, b) => a.name.localeCompare(b.name));
+            const filtered = sortedDishes.filter(d => d.name.toLowerCase().includes(query));
+            filtered.forEach(d => {
+                const li = document.createElement('li');
+                li.textContent = d.name;
+                li.addEventListener('click', () => {
+                    // Scroll to the dish in the list
+                    const dishItems = document.querySelectorAll('.dish-item');
+                    const target = Array.from(dishItems).find(item => item.querySelector('strong').textContent === d.name);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    popup.style.display = 'none';
+                    input.value = '';
+                    renderDishList(); // Re-render to clear search
+                });
+                ul.appendChild(li);
+            });
+            if (filtered.length > 0) {
+                popup.style.display = 'block';
+                // Position the popup below the input
+                const inputRect = input.getBoundingClientRect();
+                const containerRect = input.parentElement.getBoundingClientRect();
+                popup.style.position = 'absolute';
+                popup.style.top = (inputRect.bottom - containerRect.top + 2) + 'px';
+                popup.style.left = (inputRect.left - containerRect.left) + 'px';
+                popup.style.width = inputRect.width + 'px';
+            } else {
+                popup.style.display = 'none';
+            }
         }
 
         window.onload = loadData;
@@ -292,6 +399,10 @@
         </div>
         <div class="section">
             <h2>Усі страви</h2>
+            <div style="position: relative;">
+                <input type="text" id="dishSearch" placeholder="Пошук страв..." oninput="showDishSearchPopup()" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <div id="dishSearchPopup" class="dish-select-popup" style="display: none;"></div>
+            </div>
             <div id="dishList" class="dish-list"></div>
         </div>
     </div>

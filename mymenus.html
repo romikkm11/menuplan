@@ -174,9 +174,9 @@
         }
 
         // Перемкнути відображення деталей меню
-        window.toggleMenuDetails = function(idx) {
-            const detailsDiv = document.getElementById(`menu-details-${idx}`);
-            const arrow = document.getElementById(`toggle-arrow-${idx}`);
+        window.toggleMenuDetails = function(id) {
+            const detailsDiv = document.getElementById(`menu-details-${id}`);
+            const arrow = document.getElementById(`toggle-arrow-${id}`);
             const menuDiv = detailsDiv.parentElement;
             if (detailsDiv.classList.contains('show')) {
                 detailsDiv.classList.remove('show');
@@ -190,9 +190,10 @@
         };
 
         // Редагувати назву меню
-        window.editMenuName = function(idx) {
-            const titleEl = document.getElementById(`menu-title-${idx}`);
-            const currentName = savedMenus[idx].customName || savedMenus[idx].date + ' ' + savedMenus[idx].time;
+        window.editMenuName = function(id) {
+            const saved = savedMenus.find(m => m.id === id);
+            const titleEl = document.getElementById(`menu-title-${id}`);
+            const currentName = saved.customName || saved.date + ' ' + saved.time;
             const input = document.createElement('input');
             input.type = 'text';
             input.value = currentName;
@@ -201,7 +202,7 @@
             const saveBtn = document.createElement('button');
             saveBtn.textContent = 'Зберегти';
             saveBtn.onclick = async function() {
-                savedMenus[idx].customName = input.value.trim() || currentName;
+                saved.customName = input.value.trim() || currentName;
                 await saveSavedMenus();
                 renderSavedMenus();
             };
@@ -217,6 +218,11 @@
             input.focus();
         };
 
+        // Фільтрувати меню за пошуком
+        window.filterMenus = function() {
+            renderSavedMenus();
+        };
+
         // Відобразити збережені меню
         function renderSavedMenus() {
             const listDiv = document.getElementById('savedMenusList');
@@ -225,23 +231,31 @@
                 listDiv.innerHTML = '<p>Немає збережених меню.</p>';
                 return;
             }
-            savedMenus.forEach((saved, idx) => {
+            // Сортувати за id descending (новіші зверху)
+            const sortedMenus = [...savedMenus].sort((a, b) => b.id - a.id);
+            // Фільтрувати за пошуком
+            const searchQuery = document.getElementById('menuSearch').value.toLowerCase();
+            const filteredMenus = sortedMenus.filter(saved => {
+                const name = (saved.customName || saved.date + ' ' + saved.time).toLowerCase();
+                return name.includes(searchQuery);
+            });
+            filteredMenus.forEach((saved) => {
                 const menuDiv = document.createElement('div');
                 menuDiv.className = 'menu-section collapsed';
                 menuDiv.style.position = 'relative';
                 menuDiv.innerHTML = `
                     <div class="menu-header">
                         <div class="menu-title">
-                            <h3 id="menu-title-${idx}">${saved.customName || saved.date + ' ' + saved.time}</h3>
-                            <span class="edit-icon" onclick="editMenuName(${idx})">✏️</span>
+                            <h3 id="menu-title-${saved.id}">${saved.customName || saved.date + ' ' + saved.time}</h3>
+                            <span class="edit-icon" onclick="editMenuName(${saved.id})">✏️</span>
                         </div>
-                        <span class="toggle-arrow" id="toggle-arrow-${idx}" onclick="toggleMenuDetails(${idx})">▼</span>
+                        <span class="toggle-arrow" id="toggle-arrow-${saved.id}" onclick="toggleMenuDetails(${saved.id})">▼</span>
                     </div>
                     <div class="menu-actions">
-                        <button onclick="loadSavedMenu(${idx})">Використати знову</button>
-                        <button onclick="deleteSavedMenu(${idx})">Видалити</button>
+                        <button onclick="loadSavedMenu(${saved.id})">Використати знову</button>
+                        <button onclick="deleteSavedMenu(${saved.id})">Видалити</button>
                     </div>
-                    <div class="menu-details" id="menu-details-${idx}">
+                    <div class="menu-details" id="menu-details-${saved.id}">
                         <table class="menu-table">
                             <thead>
                                 <tr>
@@ -270,15 +284,17 @@
         }
 
         // Завантажити збережене меню (перенаправити до планувальника з даними)
-        window.loadSavedMenu = function(idx) {
-            const saved = savedMenus[idx];
+        window.loadSavedMenu = function(id) {
+            const saved = savedMenus.find(m => m.id === id);
             // Зберегти в sessionStorage для передачі до index.html
             sessionStorage.setItem('loadMenu', JSON.stringify(saved));
             window.location.href = 'index.html';
         };
 
         // Видалити збережене меню
-        window.deleteSavedMenu = async function(idx) {
+        window.deleteSavedMenu = async function(id) {
+            const idx = savedMenus.findIndex(m => m.id === id);
+            if (idx === -1) return;
             if (confirm('Ви впевнені, що хочете видалити це меню?')) {
                 savedMenus.splice(idx, 1);
                 await saveSavedMenus();
@@ -318,6 +334,9 @@
 
     <div class="content" id="content">
         <h1>Мої меню</h1>
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="menuSearch" placeholder="Пошук меню..." oninput="filterMenus()" style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
         <div id="savedMenusList"></div>
     </div>
 </body>
