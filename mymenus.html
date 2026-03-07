@@ -81,6 +81,9 @@
         .menu-table td { background: #fff; }
         .menu-table .day-column { text-align: left; font-weight: bold; width: 120px; }
         .menu-table .meal-column { min-width: 150px; }
+
+        .menu-details { display: none; }
+        .menu-details.show { display: block; }
     </style>
     </style>
 
@@ -157,6 +160,12 @@
             }
         }
 
+        // Перемкнути відображення деталей меню
+        window.toggleMenuDetails = function(idx) {
+            const detailsDiv = document.getElementById(`menu-details-${idx}`);
+            detailsDiv.classList.toggle('show');
+        };
+
         // Відобразити збережені меню
         function renderSavedMenus() {
             const listDiv = document.getElementById('savedMenusList');
@@ -170,28 +179,31 @@
                 menuDiv.className = 'section';
                 menuDiv.innerHTML = `
                     <h3>Меню від ${saved.date} ${saved.time}</h3>
-                    <button onclick="loadSavedMenu(${idx})">Завантажити</button>
+                    <button onclick="toggleMenuDetails(${idx})">Переглянути меню</button>
+                    <button onclick="loadSavedMenu(${idx})">Використати знову</button>
                     <button onclick="deleteSavedMenu(${idx})">Видалити</button>
-                    <table class="menu-table">
-                        <thead>
-                            <tr>
-                                <th class="day-column">День</th>
-                                ${saved.mealTypes.map(meal => `<th class="meal-column">${meal}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${days.map((day, dayIdx) => `
+                    <div class="menu-details" id="menu-details-${idx}">
+                        <table class="menu-table">
+                            <thead>
                                 <tr>
-                                    <td class="day-column">${day}</td>
-                                    ${saved.mealTypes.map(meal => {
-                                        const dishes = saved.menu[dayIdx][meal] || [];
-                                        const content = dishes.length === 0 ? 'Немає страв' : dishes.map(d => `${d.name}<br>(${Math.round((d.weight||0.1)*1000)} г)`).join('<br>');
-                                        return `<td>${content}</td>`;
-                                    }).join('')}
+                                    <th class="day-column">День</th>
+                                    ${saved.mealTypes.map(meal => `<th class="meal-column">${meal}</th>`).join('')}
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${days.map((day, dayIdx) => `
+                                    <tr>
+                                        <td class="day-column">${day}</td>
+                                        ${saved.mealTypes.map(meal => {
+                                            const dishes = saved.menu[dayIdx][meal] || [];
+                                            const content = dishes.length === 0 ? 'Немає страв' : dishes.map(d => `${d.name}<br>(${Math.round((d.weight||0.1)*1000)} г)`).join('<br>');
+                                            return `<td>${content}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 `;
                 listDiv.appendChild(menuDiv);
             });
