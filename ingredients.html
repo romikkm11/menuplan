@@ -71,6 +71,7 @@
             if (user) {
                 document.getElementById('authBlock').style.display = 'none';
                 document.getElementById('logoutBtn').style.display = 'inline';
+                loadData();
             } else {
                 document.getElementById('authBlock').style.display = 'block';
                 document.getElementById('logoutBtn').style.display = 'none';
@@ -96,12 +97,6 @@
         let ingredientsDocs = [];
         let dishes = [];
         let editingIndex = null;
-        let debounceTimer;
-
-        function debouncedRender() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => renderIngredientList(), 300);
-        }
 
         async function loadData() {
             const ingredientsSnap = await getDocs(collection(db, "ingredients"));
@@ -243,7 +238,9 @@
             content.classList.toggle('collapsed');
         }
 
-        window.onload = loadData;
+        window.onload = function() {
+            document.getElementById('ingredientSearch').addEventListener('input', renderIngredientList);
+        };
     </script>
 </head>
 <body>
@@ -278,7 +275,7 @@
             <p id="ingredientError" class="error">Введіть назву інгредієнта!</p>
         </div>
             <h2>Усі інгредієнти</h2>
-            <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." oninput="debouncedRender()" style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             <div id="ingredientList" class="ingredient-list"></div>
     </div>
 </body>
