@@ -61,6 +61,11 @@
             min-height: 100vh;
         }
 
+        .menu-section.collapsed {
+            min-height: auto;
+            padding-bottom: 40px; /* для дати */
+        }
+
         .content.collapsed .section {
             left: calc(-1 * var(--sidebar-collapsed-width));
             width: calc(100% + var(--sidebar-collapsed-width));
@@ -172,12 +177,15 @@
         window.toggleMenuDetails = function(idx) {
             const detailsDiv = document.getElementById(`menu-details-${idx}`);
             const arrow = document.getElementById(`toggle-arrow-${idx}`);
+            const menuDiv = detailsDiv.parentElement;
             if (detailsDiv.classList.contains('show')) {
                 detailsDiv.classList.remove('show');
                 arrow.textContent = '▼';
+                menuDiv.classList.add('collapsed');
             } else {
                 detailsDiv.classList.add('show');
                 arrow.textContent = '▲';
+                menuDiv.classList.remove('collapsed');
             }
         };
 
@@ -219,7 +227,7 @@
             }
             savedMenus.forEach((saved, idx) => {
                 const menuDiv = document.createElement('div');
-                menuDiv.className = 'section';
+                menuDiv.className = 'menu-section collapsed';
                 menuDiv.style.position = 'relative';
                 menuDiv.innerHTML = `
                     <div class="menu-header">
