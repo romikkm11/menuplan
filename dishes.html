@@ -245,18 +245,19 @@
             }
             document.getElementById('dishError').style.display = 'none';
 
-            if (editingIndex !== null) {
-                const dishId = dishesDocs[editingIndex];
-                await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr, totalPrice });
-            } else {
-                await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr, totalPrice });
-            }
+                if (editingIndex !== null && !window.saveAsNew) {
+                    const dishId = dishesDocs[editingIndex];
+                    await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr, totalPrice });
+                } else {
+                    await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr, totalPrice });
+                }
             document.getElementById('dishName').value = '';
             document.getElementById('dishTotalPrice').value = '';
             currentIngredients = [];
             renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
+                window.saveAsNew = false;
             await loadData();
         };
 
@@ -272,6 +273,7 @@
             renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'inline';
             editingIndex = index;
+                document.getElementById('saveAsNewBtn').style.display = 'inline';
         };
 
         window.cancelEdit = function() {
@@ -282,6 +284,7 @@
             document.getElementById('cancelEditBtn').style.display = 'none';
             editingIndex = null;
             document.getElementById('dishError').style.display = 'none';
+                document.getElementById('saveAsNewBtn').style.display = 'none';
         };
 
         window.deleteDish = async function(index) {
@@ -527,6 +530,7 @@
 
         window.onload = function() {
             document.getElementById('dishSearch').addEventListener('input', renderDishList);
+                document.getElementById('saveAsNewBtn').style.display = 'none';
         };
     </script>
 </head>
@@ -558,6 +562,7 @@
                 <button type="button" onclick="addIngredientRow()">Додати інгредієнт</button>
                 <button onclick="saveDish()" id="saveDishBtn">Зберегти страву</button>
                 <button onclick="cancelEdit()" id="cancelEditBtn" style="display: none;">Скасувати</button>
+                <button onclick="window.saveAsNew=true; saveDish();" id="saveAsNewBtn" style="display: none; background-color:#007bff; color:#fff;">Зберегти як нову</button>
                 <div id="variationBlock" style="display:none; margin-top:10px;">
                     <input type="text" id="variationNote" placeholder="Примітка до варіації" style="width:95%;">
                     <button onclick="saveVariation()" id="saveVariationBtn" style="background-color:#ffc107;color:#333;">Зберегти варіацію</button>
