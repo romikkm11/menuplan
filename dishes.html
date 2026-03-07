@@ -139,15 +139,16 @@
             const container = document.getElementById('ingredientInputs');
             container.innerHTML = '';
             currentIngredients.forEach((ing, idx) => {
+                const datalistId = `ingredientList-${idx}`;
                 const row = document.createElement('div');
                 row.className = 'ingredient-row';
                 row.innerHTML = `
                     <div style="position: relative;">
                         <input type="text" placeholder="Назва" value="${ing.name}" 
-                            list="ingredientList" 
+                            list="${datalistId}" 
                             onchange="updateIngredientField(${idx}, 'name', this.value); validateIngredientInput(this, ${idx});" 
                             onfocus="showIngredientPopup(this, ${idx})" autocomplete="off">
-                        <datalist id="ingredientList">
+                        <datalist id="${datalistId}">
                             ${ingredients.map(i => `<option value="${i.name}">`).join('')}
                         </datalist>
                         <div class="ingredient-select-popup" style="display: none;"></div>
