@@ -866,12 +866,21 @@
 
             const shopping = {}; let totalCost = 0;
             menuDishes.forEach(item => {
-                const dish = dishes.find(d => d.name === item.name);
-                if (!dish) return; // пропустити, якщо страва не знайдена
-                const baseQty = getDishBaseQty(dish);
+                let dish = dishes.find(d => item.name.startsWith(d.name));
+                let variation = null;
+                if (dish && dish.variations && item.name.includes('(')) {
+                    // Find variation by note
+                    const noteMatch = item.name.match(/\(([^)]+)\)/);
+                    if (noteMatch) {
+                        variation = dish.variations.find(v => (v.note || 'варіація') === noteMatch[1]);
+                    }
+                }
+                const usedDish = variation || dish;
+                if (!usedDish) return;
+                const baseQty = getDishBaseQty(usedDish);
                 const w = item.weight ?? (baseQty > 0 ? baseQty : 0.1);
                 const factor = baseQty > 0 ? (w / baseQty) : 1;
-                dish.ingredients.forEach(ing => {
+                usedDish.ingredients.forEach(ing => {
                     if (!shopping[ing.name]) shopping[ing.name] = { quantity: 0, price: 0 };
                     shopping[ing.name].quantity += (ing.quantity || 0) * factor;
                     shopping[ing.name].price = ing.price || ingredients.find(i => i.name === ing.name)?.price || 0;
