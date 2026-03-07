@@ -471,6 +471,7 @@
                                                 unit: ing.unit || 'кг'
                                             }))
                                             .filter(ing => ing.name && ing.quantity > 0);
+                                        // Автоматичне підтягування інгредієнта з бази
                                         const allExist = ingredientsArr.every(ing => ingredients.some(i => i.name === ing.name));
                                         if (!name || !Array.isArray(ingredientsArr) || ingredientsArr.length === 0 || !allExist) {
                                             document.getElementById('dishError').textContent = 'Введіть назву і хоча б один існуючий інгредієнт!';
@@ -500,15 +501,55 @@
                                         window._variationDishIndex = null;
                                         await loadData();
                                     };
+                                    // Додаємо автопідтягування для інгредієнтів у варіації
+                                    window.addVariationIngredientRow = function() {
+                                        currentIngredients.push({ name: '', quantity: '', unit: 'кг' });
+                                        renderIngredientInputs();
+                                    };
+                                    window.removeVariationIngredientRow = function(index) {
+                                        currentIngredients.splice(index, 1);
+                                        renderIngredientInputs();
+                                    };
+                                    window.updateVariationIngredientField = function(index, field, value) {
+                                        currentIngredients[index][field] = value;
+                                    };
+                                    // Використовуємо ту ж логіку автопідтягування як для основної страви
+                                    function renderVariationIngredientInputs() {
+                                        const container = document.getElementById('ingredientInputs');
+                                        container.innerHTML = '';
+                                        currentIngredients.forEach((ing, idx) => {
+                                            const row = document.createElement('div');
+                                            row.className = 'ingredient-row';
+                                            row.innerHTML = `
+                                                <div style="position: relative;">
+                                                    <input type="text" placeholder="Назва" value="${ing.name}" 
+                                                        onchange="updateVariationIngredientField(${idx}, 'name', this.value)" 
+                                                        onfocus="showIngredientPopup(this, ${idx})" autocomplete="off">
+                                                    <div class="ingredient-select-popup" style="display: none;"></div>
+                                                </div>
+                                                <input type="number" placeholder="Кількість" min="0" step="0.001" value="${ing.quantity}" onchange="updateVariationIngredientField(${idx}, 'quantity', this.value)">
+                                                <select onchange="updateVariationIngredientField(${idx}, 'unit', this.value)">
+                                                    <option value="кг" ${ing.unit === 'кг' ? 'selected' : ''}>кг</option>
+                                                    <option value="г" ${ing.unit === 'г' ? 'selected' : ''}>г</option>
+                                                    <option value="шт" ${ing.unit === 'шт' ? 'selected' : ''}>шт</option>
+                                                    <option value="л" ${ing.unit === 'л' ? 'selected' : ''}>л</option>
+                                                </select>
+                                                <button type="button" onclick="removeVariationIngredientRow(${idx})">✕</button>
+                                            `;
+                                            container.appendChild(row);
+                                        });
+                                    }
+                                    // Викликаємо renderVariationIngredientInputs при редагуванні варіації
+                                    renderVariationIngredientInputs();
                     const dish = dishes[index];
                     document.getElementById('dishName').value = dish.name;
                     document.getElementById('dishTotalPrice').value = dish.totalPrice || '';
-                    currentIngredients = dish.ingredients.map(ing => ({
-                        name: ing.name,
-                        quantity: ing.quantity,
-                        unit: ing.unit || 'кг'
-                    }));
-                    renderIngredientInputs();
+                                    currentIngredients = dish.ingredients.map(ing => ({
+                                        name: ing.name,
+                                        quantity: ing.quantity,
+                                        unit: ing.unit || 'кг'
+                                    }));
+                                    renderVariationIngredientInputs();
                     document.getElementById('cancelEditBtn').style.display = 'inline';
                     editingIndex = null;
                     document.getElementById('variationBlock').style.display = 'block';
