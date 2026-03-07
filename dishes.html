@@ -314,9 +314,12 @@
         <span style="color:#888; font-size:0.95em; margin-left: 10px;">
             ${dish.totalPrice ? `Орієнтовна вартість: ${dish.totalPrice} грн` : ''}
         </span>
-        <div style="margin-left: auto;">
+        <div style="margin-left: auto; display: flex; align-items: center;">
             <button class="action-btn" onclick="editDish(${realIndex}); event.stopPropagation();">Редагувати</button>
             <button class="action-btn delete" onclick="deleteDish(${realIndex}); event.stopPropagation();">Видалити</button>
+            <button class="action-btn" title="Додати варіацію" onclick="addVariation(${realIndex}); event.stopPropagation();" style="background-color: #ffc107; color: #333;">
+                <span role="img" aria-label="Варіація">➕</span>
+            </button>
         </div>
     </div>
     <div class="dish-details">
@@ -327,6 +330,20 @@
                 `;
                 dishList.appendChild(item);
             });
+                // Додаємо функцію для створення варіації
+                window.addVariation = function(index) {
+                    const dish = dishes[index];
+                    document.getElementById('dishName').value = dish.name + ' (варіація)';
+                    document.getElementById('dishTotalPrice').value = dish.totalPrice || '';
+                    currentIngredients = dish.ingredients.map(ing => ({
+                        name: ing.name,
+                        quantity: ing.quantity,
+                        unit: ing.unit || 'кг'
+                    }));
+                    renderIngredientInputs();
+                    document.getElementById('cancelEditBtn').style.display = 'inline';
+                    editingIndex = null; // Створюємо нову страву, не редагуємо існуючу
+                };
         }
         window.toggleDishDetails = function(header) {
             const details = header.parentElement.querySelector('.dish-details');
