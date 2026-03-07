@@ -328,8 +328,8 @@
                 dishList.appendChild(item);
             });
         }
-        function toggleDishDetails(header) {
-            const details = header.nextElementSibling;
+        window.toggleDishDetails = function(header) {
+            const details = header.parentElement.querySelector('.dish-details');
             const arrow = header.querySelector('.arrow');
             if (details.style.display === 'none' || details.style.display === '') {
                 details.style.display = 'block';
@@ -338,7 +338,7 @@
                 details.style.display = 'none';
                 arrow.textContent = '▶';
             }
-        }
+        };
 
         window.onload = function() {
             document.getElementById('dishSearch').addEventListener('input', renderDishList);
