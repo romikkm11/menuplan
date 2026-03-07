@@ -144,8 +144,12 @@
                 row.innerHTML = `
                     <div style="position: relative;">
                         <input type="text" placeholder="Назва" value="${ing.name}" 
-                            onchange="updateIngredientField(${idx}, 'name', this.value)" 
+                            list="ingredientList" 
+                            onchange="updateIngredientField(${idx}, 'name', this.value); validateIngredientInput(this, ${idx});" 
                             onfocus="showIngredientPopup(this, ${idx})" autocomplete="off">
+                        <datalist id="ingredientList">
+                            ${ingredients.map(i => `<option value="${i.name}">`).join('')}
+                        </datalist>
                         <div class="ingredient-select-popup" style="display: none;"></div>
                     </div>
                     <input type="number" placeholder="Кількість" min="0" step="0.001" value="${ing.quantity}" onchange="updateIngredientField(${idx}, 'quantity', this.value)">
