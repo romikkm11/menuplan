@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Мої меню</title>
+    <style>
+        :root {
+            --sidebar-width: 220px;
+            --sidebar-collapsed-width: 80px;
+            --content-padding: 20px;
+        }
+
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; display: flex; transition: margin-left 0.3s; }
+        .sidebar {
+            width: 200px;
+            background-color: #333;
+            color: white;
+            height: 100vh;
+            padding: 20px;
+            position: fixed;
+            transition: width 0.3s;
+            z-index: 3000;
+        }
+        .sidebar.collapsed { width: 60px; }
+
+        .sidebar h2 { margin: 0 0 20px; font-size: 1.2em; display: block; }
+        .sidebar.collapsed h2 { display: none; }
+        .sidebar a { color: white; text-decoration: none; display: flex; align-items: center; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .sidebar a:hover { background-color: #555; }
+        .sidebar a span { margin-left: 10px; display: inline; }
+        .sidebar.collapsed a span { display: none; }
+        .toggle-btn { background: none; border: none; color: white; font-size: 1.2em; cursor: pointer; padding: 10px; width: 100%; text-align: left; }
+
+        .content {
+            margin-left: var(--sidebar-width);
+            padding: var(--content-padding);
+            max-width: 2180px;
+            flex: 1;
+            transition: margin-left 0.3s;
+            position: relative;
+            z-index: 0;
+            overflow: auto;
+        }
+        .content.collapsed { margin-left: var(--sidebar-collapsed-width); }
+
+        h1, h2 { color: #333; }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            left: calc(-1 * var(--sidebar-width));
+            width: calc(100% + var(--sidebar-width));
+            box-sizing: border-box;
+            padding-left: calc(var(--content-padding) + var(--sidebar-width));
+            padding-right: var(--content-padding);
+            min-height: 100vh;
+        }
+
+        .content.collapsed .section {
+            left: calc(-1 * var(--sidebar-collapsed-width));
+            width: calc(100% + var(--sidebar-collapsed-width));
+            padding-left: calc(var(--content-padding) + var(--sidebar-collapsed-width));
+            padding-right: var(--content-padding);
+        }
+
+        select, button { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        .auth-btn { background-color: #007bff; }
+        .auth-btn:hover { background-color: #0056b3; }
+        .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCq8HRJchKgy7w97JzKPWar37YbiDMt94o",
+            authDomain: "menu-data-4bb71.firebaseapp.com",
+            projectId: "menu-data-4bb71",
+            storageBucket: "menu-data-4bb71.firebasestorage.app",
+            messagingSenderId: "1055556497638",
+            appId: "1:1055556497638:web:fde8fc971af723b755cb27"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let savedMenus = [];
+        const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота', 'Неділя'];
+
+        // АВТЕНТИФІКАЦІЯ
+        onAuthStateChanged(auth, async user => {
+            if (user) {
+                const b = document.getElementById('authBlock'); if (b) b.style.display = 'none';
+                const l = document.getElementById('logoutBtn'); if (l) l.style.display = 'inline';
+                await loadSavedMenus();
+                renderSavedMenus();
+            } else {
+                const b = document.getElementById('authBlock'); if (b) b.style.display = 'block';
+                const l = document.getElementById('logoutBtn'); if (l) l.style.display = 'none';
+                savedMenus = [];
+                renderSavedMenus();
+            }
+        });
+
+        window.login = async function() {
+            const email = document.getElementById('email')?.value || '';
+            const password = document.getElementById('password')?.value || '';
+            try { await signInWithEmailAndPassword(auth, email, password); }
+            catch (e) { alert('Невірний email або пароль'); }
+        };
+
+        window.logout = async function() { await signOut(auth); };
+
+        // Завантажити збережені меню з Firebase
+        async function loadSavedMenus() {
+            const user = auth.currentUser;
+            if (!user) return;
+            try {
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    savedMenus = docSnap.data().savedMenus || [];
+                } else {
+                    savedMenus = [];
+                }
+            } catch (e) {
+                console.error('Помилка завантаження меню:', e);
+                savedMenus = [];
+            }
+        }
+
+        // Зберегти меню на Firebase
+        async function saveSavedMenus() {
+            const user = auth.currentUser;
+            if (!user) return;
+            try {
+                await setDoc(doc(db, 'users', user.uid), { savedMenus }, { merge: true });
+            } catch (e) {
+                console.error('Помилка збереження меню:', e);
+            }
+        }
+
+        // Відобразити збережені меню
+        function renderSavedMenus() {
+            const listDiv = document.getElementById('savedMenusList');
+            listDiv.innerHTML = '';
+            if (savedMenus.length === 0) {
+                listDiv.innerHTML = '<p>Немає збережених меню.</p>';
+                return;
+            }
+            savedMenus.forEach((saved, idx) => {
+                const menuDiv = document.createElement('div');
+                menuDiv.className = 'section';
+                menuDiv.innerHTML = `
+                    <h3>Меню від ${saved.date} ${saved.time}</h3>
+                    <button onclick="loadSavedMenu(${idx})">Завантажити</button>
+                    <button onclick="deleteSavedMenu(${idx})">Видалити</button>
+                    <div class="saved-menu-details"></div>
+                `;
+                const detailsDiv = menuDiv.querySelector('.saved-menu-details');
+                days.forEach((day, dayIdx) => {
+                    const dayDiv = document.createElement('div');
+                    dayDiv.innerHTML = `<h4>${day}</h4>`;
+                    saved.mealTypes.forEach(meal => {
+                        const mealDiv = document.createElement('div');
+                        mealDiv.innerHTML = `<strong>${meal}:</strong> `;
+                        const dishes = saved.menu[dayIdx][meal] || [];
+                        if (dishes.length === 0) {
+                            mealDiv.innerHTML += 'Немає страв';
+                        } else {
+                            mealDiv.innerHTML += dishes.map(d => `${d.name} (${Math.round((d.weight||0.1)*1000)} г)`).join(', ');
+                        }
+                        dayDiv.appendChild(mealDiv);
+                    });
+                    detailsDiv.appendChild(dayDiv);
+                });
+                listDiv.appendChild(menuDiv);
+            });
+        }
+
+        // Завантажити збережене меню (перенаправити до планувальника з даними)
+        window.loadSavedMenu = function(idx) {
+            const saved = savedMenus[idx];
+            // Зберегти в sessionStorage для передачі до index.html
+            sessionStorage.setItem('loadMenu', JSON.stringify(saved));
+            window.location.href = 'index.html';
+        };
+
+        // Видалити збережене меню
+        window.deleteSavedMenu = async function(idx) {
+            if (confirm('Ви впевнені, що хочете видалити це меню?')) {
+                savedMenus.splice(idx, 1);
+                await saveSavedMenus();
+                renderSavedMenus();
+            }
+        };
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+
+        window.onload = function() {
+            // Нічого додаткового, оскільки onAuthStateChanged обробляє
+        };
+    </script>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+        <h2>Меню</h2>
+        <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
+        <a href="mymenus.html"><span role="img" aria-label="Мої меню">📚</span><span>Мої меню</span></a>
+        <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
+        <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
+        <div style="margin-top:20px;">
+            <div id="authBlock" class="auth-form">
+                <input id="email" type="email" placeholder="Email">
+                <input id="password" type="password" placeholder="Пароль">
+                <button id="loginBtn" class="auth-btn" onclick="login()">Увійти</button>
+            </div>
+            <button id="logoutBtn" class="auth-btn" onclick="logout()" style="display:none;">Вийти</button>
+        </div>
+    </div>
+
+    <div class="content" id="content">
+        <h1>Мої меню</h1>
+        <div id="savedMenusList"></div>
+    </div>
+</body>
+</html>

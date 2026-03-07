@@ -237,7 +237,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -291,6 +291,9 @@
             mealTypes.forEach(meal => { dayWeights[meal] = []; });
             return dayWeights;
         });
+
+        // Збережені меню (тимчасово для завантаження)
+        let savedMenus = [];
 
         // Завантажити типи прийомів їжі з localStorage
         function loadMealTypes() {
@@ -488,6 +491,36 @@
             renderCell();
             return container;
         }
+
+        // Зберегти поточне меню
+        window.saveCurrentMenu = async function(silent = false) {
+            const user = auth.currentUser;
+            if (!user) {
+                if (!silent) alert('Будь ласка, увійдіть, щоб зберегти меню.');
+                return;
+            }
+            const now = new Date();
+            const savedMenu = {
+                id: Date.now(),
+                date: now.toLocaleDateString('uk-UA'),
+                time: now.toLocaleTimeString('uk-UA'),
+                menu: JSON.parse(JSON.stringify(menu)), // глибока копія
+                menuWeights: JSON.parse(JSON.stringify(menuWeights)),
+                mealTypes: [...mealTypes]
+            };
+            try {
+                // Завантажити існуючі меню
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                savedMenus = docSnap.exists() ? docSnap.data().savedMenus || [] : [];
+                savedMenus.push(savedMenu);
+                await setDoc(docRef, { savedMenus }, { merge: true });
+                if (!silent) alert('Меню збережено!');
+            } catch (e) {
+                console.error('Помилка збереження меню:', e);
+                if (!silent) alert('Помилка збереження меню.');
+            }
+        };
 
         function renderMenu() {
             const menuDiv = document.getElementById('menu'); menuDiv.innerHTML = '';
@@ -818,11 +851,28 @@
             });
             const totalEl = document.getElementById('totalCost'); totalEl.innerHTML = `Загальна вартість: ${totalCost.toFixed(2)} грн`;
             showCopyButton(true);
+
+            // Автоматичне збереження меню після формування списку покупок
+            if (auth.currentUser) {
+                saveCurrentMenu(true).catch(e => console.error('Помилка автоматичного збереження:', e));
+            }
         };
 
         window.onload = function() {
             loadData();
             const copyBtn = document.getElementById('copyShoppingListBtn'); if (copyBtn) copyBtn.addEventListener('click', copyShoppingList);
+            // Перевірити, чи є меню для завантаження з sessionStorage
+            const loadMenuData = sessionStorage.getItem('loadMenu');
+            if (loadMenuData) {
+                const saved = JSON.parse(loadMenuData);
+                menu = saved.menu;
+                menuWeights = saved.menuWeights;
+                mealTypes = saved.mealTypes;
+                saveMealTypes();
+                renderMenu();
+                sessionStorage.removeItem('loadMenu');
+                alert('Меню завантажено!');
+            }
         };
     </script>
 </head>
@@ -831,6 +881,7 @@
         <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
         <h2>Меню</h2>
         <a href="index.html"><span role="img" aria-label="Планувальник">📅</span><span>Планувальник</span></a>
+        <a href="mymenus.html"><span role="img" aria-label="Мої меню">📚</span><span>Мої меню</span></a>
         <a href="dishes.html"><span role="img" aria-label="Страви">🍽️</span><span>Страви</span></a>
         <a href="ingredients.html"><span role="img" aria-label="Інгредієнти">🥕</span><span>Інгредієнти</span></a>
         <div style="margin-top:20px;">
@@ -848,6 +899,7 @@
         <div class="section">
             <h2>Сформувати меню</h2>
             <div id="menu"></div>
+            <button onclick="saveCurrentMenu()">Зберегти меню</button>
             <button onclick="generateShoppingList()">Сформувати список покупок</button>
             <p id="menuError" class="error">Введіть коректні назви страв!</p>
         </div>
