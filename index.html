@@ -488,9 +488,7 @@
                                 classicBtn.addEventListener('click', function() {
                                     const base = getDishBaseQty(d); const w = base>0?base:0.1;
                                     menu[dayIdx][meal].push({ name: d.name, weight: w });
-                                    renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories();
-                                    // Keep popup open for further selection
-                                    fillList(input.value);
+                                    renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
                                 });
                                 ul.appendChild(classicBtn);
                                 d.variations.forEach((v, vIdx) => {
@@ -502,9 +500,7 @@
                                         // Add variation to menu
                                         const w = getDishBaseQty(v) > 0 ? getDishBaseQty(v) : 0.1;
                                         menu[dayIdx][meal].push({ name: d.name + ' (' + (v.note || 'варіація') + ')', weight: w });
-                                        renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories();
-                                        // Keep popup open for further selection
-                                        fillList(input.value);
+                                        renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
                                     });
                                     ul.appendChild(varBtn);
                                 });
