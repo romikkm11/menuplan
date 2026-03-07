@@ -524,15 +524,17 @@
                     const dish = dishes[index];
                     document.getElementById('dishName').value = dish.name;
                     document.getElementById('dishTotalPrice').value = dish.totalPrice || '';
-                                    currentIngredients = dish.ingredients.map(ing => ({
-                                        name: ing.name,
-                                        quantity: ing.quantity,
-                                        unit: ing.unit || 'кг'
-                                    }));
-                                    renderVariationIngredientInputs();
+                    currentIngredients = dish.ingredients.map(ing => ({
+                        name: ing.name,
+                        quantity: ing.quantity,
+                        unit: ing.unit || 'кг'
+                    }));
+                    renderIngredientInputs();
                     document.getElementById('cancelEditBtn').style.display = 'inline';
                     editingIndex = null;
                     document.getElementById('variationBlock').style.display = 'block';
+                    document.getElementById('saveVariationBtn').style.display = 'inline';
+                    document.getElementById('variationNote').style.display = 'inline';
                     document.getElementById('saveDishBtn').style.display = 'none';
                     window._variationDishIndex = index;
                 };
