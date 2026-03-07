@@ -74,6 +74,14 @@
         .auth-btn { background-color: #007bff; }
         .auth-btn:hover { background-color: #0056b3; }
         .auth-form input { display: block; width: 90%; margin-bottom: 5px; padding: 6px; }
+
+        .menu-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .menu-table th, .menu-table td { padding: 8px 5px; text-align: center; vertical-align: top; border: 1px solid #ddd; }
+        .menu-table th { background: #f8f9fa; font-weight: bold; }
+        .menu-table td { background: #fff; }
+        .menu-table .day-column { text-align: left; font-weight: bold; width: 120px; }
+        .menu-table .meal-column { min-width: 150px; }
+    </style>
     </style>
 
     <script type="module">
@@ -164,25 +172,27 @@
                     <h3>Меню від ${saved.date} ${saved.time}</h3>
                     <button onclick="loadSavedMenu(${idx})">Завантажити</button>
                     <button onclick="deleteSavedMenu(${idx})">Видалити</button>
-                    <div class="saved-menu-details"></div>
+                    <table class="menu-table">
+                        <thead>
+                            <tr>
+                                <th class="day-column">День</th>
+                                ${saved.mealTypes.map(meal => `<th class="meal-column">${meal}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${days.map((day, dayIdx) => `
+                                <tr>
+                                    <td class="day-column">${day}</td>
+                                    ${saved.mealTypes.map(meal => {
+                                        const dishes = saved.menu[dayIdx][meal] || [];
+                                        const content = dishes.length === 0 ? 'Немає страв' : dishes.map(d => `${d.name}<br>(${Math.round((d.weight||0.1)*1000)} г)`).join('<br>');
+                                        return `<td>${content}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
                 `;
-                const detailsDiv = menuDiv.querySelector('.saved-menu-details');
-                days.forEach((day, dayIdx) => {
-                    const dayDiv = document.createElement('div');
-                    dayDiv.innerHTML = `<h4>${day}</h4>`;
-                    saved.mealTypes.forEach(meal => {
-                        const mealDiv = document.createElement('div');
-                        mealDiv.innerHTML = `<strong>${meal}:</strong> `;
-                        const dishes = saved.menu[dayIdx][meal] || [];
-                        if (dishes.length === 0) {
-                            mealDiv.innerHTML += 'Немає страв';
-                        } else {
-                            mealDiv.innerHTML += dishes.map(d => `${d.name} (${Math.round((d.weight||0.1)*1000)} г)`).join(', ');
-                        }
-                        dayDiv.appendChild(mealDiv);
-                    });
-                    detailsDiv.appendChild(dayDiv);
-                });
                 listDiv.appendChild(menuDiv);
             });
         }
