@@ -422,24 +422,23 @@
                     nameSpan.textContent = item.name;
                     nameSpan.title = item.name;
                     nameSpan.style.flex = '1';
-                    // Додаємо можливість заміни страви по кліку
                     nameSpan.style.cursor = 'pointer';
                     nameSpan.title = 'Замінити цю страву';
                     nameSpan.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        openPopup((newDish) => {
-                            // Заміна страви на нову
-                            if (newDish) {
-                                // Якщо є варіації, newDish може бути об'єктом {name, weight}
-                                if (typeof newDish === 'object' && newDish.name) {
-                                    entries[idx] = { name: newDish.name, weight: newDish.weight };
-                                } else {
-                                    entries[idx] = { name: newDish, weight: 0.1 };
-                                }
-                                renderCell();
-                                updateMenuTotalDishesPrice();
-                                updateDailyCalories();
+                        openPopup(function(newDish) {
+                            if (!newDish) return;
+                            // Додаємо нову страву замість поточної
+                            let newEntry;
+                            if (typeof newDish === 'object' && newDish.name) {
+                                newEntry = { name: newDish.name, weight: item.weight };
+                            } else {
+                                newEntry = { name: newDish, weight: item.weight };
                             }
+                            entries[idx] = newEntry;
+                            renderCell();
+                            updateMenuTotalDishesPrice();
+                            updateDailyCalories();
                         });
                     });
 
@@ -468,7 +467,19 @@
                 const addBtn = document.createElement('button');
                 addBtn.type = 'button'; addBtn.className = 'add-meal-btn'; addBtn.textContent = '+'; addBtn.title = 'Додати страву';
                 addBtn.addEventListener('click', (e)=>{
-                    e.stopPropagation(); openPopup();
+                    e.stopPropagation(); openPopup(function(newDish) {
+                        if (!newDish) return;
+                        let newEntry;
+                        if (typeof newDish === 'object' && newDish.name) {
+                            newEntry = { name: newDish.name, weight: 0.1 };
+                        } else {
+                            newEntry = { name: newDish, weight: 0.1 };
+                        }
+                        entries.push(newEntry);
+                        renderCell();
+                        updateMenuTotalDishesPrice();
+                        updateDailyCalories();
+                    });
                 });
 
                 container.appendChild(listDiv);
