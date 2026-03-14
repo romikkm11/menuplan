@@ -422,6 +422,26 @@
                     nameSpan.textContent = item.name;
                     nameSpan.title = item.name;
                     nameSpan.style.flex = '1';
+                    // Додаємо можливість заміни страви по кліку
+                    nameSpan.style.cursor = 'pointer';
+                    nameSpan.title = 'Замінити цю страву';
+                    nameSpan.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openPopup((newDish) => {
+                            // Заміна страви на нову
+                            if (newDish) {
+                                // Якщо є варіації, newDish може бути об'єктом {name, weight}
+                                if (typeof newDish === 'object' && newDish.name) {
+                                    entries[idx] = { name: newDish.name, weight: newDish.weight };
+                                } else {
+                                    entries[idx] = { name: newDish, weight: 0.1 };
+                                }
+                                renderCell();
+                                updateMenuTotalDishesPrice();
+                                updateDailyCalories();
+                            }
+                        });
+                    });
 
                     const weightSpan = document.createElement('span');
                     weightSpan.className = 'weight-display';
@@ -464,7 +484,8 @@
             }
 
             let popup = null;
-            function openPopup() {
+            // onSelect: callback(newDish) => void
+            function openPopup(onSelect) {
                 if (popup) { popup.remove(); popup = null; return; }
                 popup = document.createElement('div'); popup.className = 'dish-select-popup';
                 const input = document.createElement('input'); input.type='text'; input.className='dish-search-input-popup'; input.placeholder='Пошук страви...'; input.autocomplete='off';
@@ -486,8 +507,8 @@
                                 classicBtn.style.marginBottom = '8px';
                                 classicBtn.addEventListener('click', function() {
                                     const base = getDishBaseQty(d); const w = base>0?base:0.1;
-                                    menu[dayIdx][meal].push({ name: d.name, weight: w });
-                                    renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
+                                    if (onSelect) onSelect({ name: d.name, weight: w });
+                                    popup.remove(); popup=null;
                                 });
                                 ul.appendChild(classicBtn);
                                 d.variations.forEach((v, vIdx) => {
@@ -498,17 +519,16 @@
                                     varBtn.addEventListener('click', function() {
                                         // Add variation to menu
                                         const w = getDishBaseQty(v) > 0 ? getDishBaseQty(v) : 0.1;
-                                        menu[dayIdx][meal].push({ name: d.name + ' (' + (v.note || 'варіація') + ')', weight: w });
-                                        renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
+                                        if (onSelect) onSelect({ name: d.name + ' (' + (v.note || 'варіація') + ')', weight: w });
+                                        popup.remove(); popup=null;
                                     });
                                     ul.appendChild(varBtn);
                                 });
-                                // Do not close popup or add anything yet
                                 return;
                             }
                             const base = getDishBaseQty(d); const w = base>0?base:0.1;
-                            menu[dayIdx][meal].push({ name: d.name, weight: w });
-                            renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); popup.remove(); popup=null;
+                            if (onSelect) onSelect({ name: d.name, weight: w });
+                            popup.remove(); popup=null;
                         });
                         ul.appendChild(li);
                     });
