@@ -388,7 +388,6 @@
             dishes = dishesSnap.docs.map(doc => doc.data());
             const ingredientsSnap = await getDocs(collection(db, "ingredients"));
             ingredients = ingredientsSnap.docs.map(doc => doc.data());
-            renderMenu();
         }
 
         function toggleSidebar() {
@@ -940,7 +939,9 @@
                     alert('Меню завантажено!');
                 });
             } else {
-                loadData();
+                loadData().then(() => {
+                    renderMenu();
+                });
             }
         };
     </script>
