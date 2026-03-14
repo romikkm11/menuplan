@@ -917,9 +917,24 @@
             const loadMenuData = sessionStorage.getItem('loadMenu');
             if (loadMenuData) {
                 const saved = JSON.parse(loadMenuData);
-                menu = saved.menu;
-                menuWeights = saved.menuWeights;
-                mealTypes = saved.mealTypes;
+                // Виправлення структури menu
+                let fixedMenu = saved.menu;
+                if (!Array.isArray(fixedMenu) || fixedMenu.length !== 7) {
+                    fixedMenu = Array(7).fill().map(() => ({}));
+                }
+                // Виправлення mealTypes
+                let fixedMealTypes = Array.isArray(saved.mealTypes) ? saved.mealTypes : ['Сніданок', 'Обід', 'Підвечірок', 'Вечеря'];
+                // Переконатися, що кожен день має всі прийоми їжі
+                fixedMenu = fixedMenu.map(dayMeals => {
+                    const obj = {};
+                    fixedMealTypes.forEach(meal => {
+                        obj[meal] = Array.isArray(dayMeals?.[meal]) ? dayMeals[meal] : [];
+                    });
+                    return obj;
+                });
+                menu = fixedMenu;
+                menuWeights = saved.menuWeights && Array.isArray(saved.menuWeights) ? saved.menuWeights : Array(7).fill().map(() => ({}));
+                mealTypes = fixedMealTypes;
                 saveMealTypes();
                 renderMenu();
                 sessionStorage.removeItem('loadMenu');
