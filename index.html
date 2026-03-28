@@ -545,7 +545,8 @@
                                     varBtn.style.marginBottom = '8px';
                                     varBtn.addEventListener('click', function() {
                                         // Add variation to menu
-                                        const w = getDishBaseQty(v) > 0 ? getDishBaseQty(v) : 0.1;
+                                        const base = getDishBaseQty(v);
+                                        const w = base > 0 ? base : 0.1;
                                         if (onSelect) onSelect({ name: d.name + ' (' + (v.note || 'варіація') + ')', weight: w });
                                         popup.remove(); popup=null;
                                     });
