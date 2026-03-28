@@ -470,9 +470,9 @@
                     weightSpan.textContent = `${Math.round((item.weight||0.1)*1000)} г`;
 
                     const minus = document.createElement('button'); minus.className = 'weight-btn'; minus.textContent = '−';
-                    minus.addEventListener('click', (e)=>{ e.stopPropagation(); const cur = item.weight||0.1; item.weight = Math.max(0.1, +(cur-0.1).toFixed(3)); /* re-render to update totals */ renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
+                    minus.addEventListener('click', (e)=>{ e.stopPropagation(); const cur = item.weight||0.1; item.weight = Math.max(0.05, +(cur-0.05).toFixed(3)); /* re-render to update totals */ renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
                     const plus = document.createElement('button'); plus.className = 'weight-btn'; plus.textContent = '+';
-                    plus.addEventListener('click', (e)=>{ e.stopPropagation(); const cur = item.weight||0.1; item.weight = +(cur+0.1).toFixed(3); /* re-render to update totals */ renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
+                    plus.addEventListener('click', (e)=>{ e.stopPropagation(); const cur = item.weight||0.1; item.weight = +(cur+0.05).toFixed(3); /* re-render to update totals */ renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
 
                     const removeBtn = document.createElement('button'); removeBtn.className = 'clear-dish-btn'; removeBtn.innerHTML = '✕'; removeBtn.title = 'Видалити цю страву';
                     removeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); menu[dayIdx][meal].splice(idx,1); renderCell(); updateMenuTotalDishesPrice(); updateDailyCalories(); });
