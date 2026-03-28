@@ -58,6 +58,15 @@
         .arrow { cursor: pointer; transition: transform 0.2s; margin-right: 5px; }
         .dish-header { cursor: pointer; display: flex; align-items: center; }
         .dish-details { margin-left: 20px; display: none; }
+        .dish-tags { margin-top: 5px; }
+        .dish-tag {
+            display: inline-block;
+            font-size: 0.8em;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-right: 5px;
+            color: white;
+        }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -106,6 +115,8 @@
         let dishes = [];
         let dishesDocs = [];
         let ingredients = [];
+        let allTags = [];
+        let selectedTags = [];
         let editingIndex = null;
         let currentIngredients = [];
 
@@ -119,7 +130,113 @@
 
             renderDishList();
             renderIngredientInputs();
+            collectAndRenderTags();
         }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function collectAndRenderTags() {
+            const tagSet = new Set();
+            dishes.forEach(dish => {
+                if (dish.tags && Array.isArray(dish.tags)) {
+                    dish.tags.forEach(tag => tagSet.add(tag.trim()));
+                }
+            });
+            allTags = Array.from(tagSet).sort();
+            renderTags();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('tagContainer');
+            container.innerHTML = '<h2>Теги</h2>';
+
+            // Спочатку додаємо вибрані теги
+            selectedTags.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = 'tag-btn selected';
+                btn.textContent = tag;
+                btn.style.backgroundColor = getTagColor(tag);
+                btn.onclick = () => toggleTagSelection(tag);
+                container.appendChild(btn);
+            });
+
+            // Потім додаємо інші теги
+            allTags.filter(tag => !selectedTags.includes(tag)).forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = 'tag-btn';
+                btn.textContent = tag;
+                btn.style.backgroundColor = getTagColor(tag);
+                btn.onclick = () => toggleTagSelection(tag);
+                container.appendChild(btn);
+            });
+        }
+
+        const tagColorCache = {};
+        function getTagColor(tag) {
+            if (!tagColorCache[tag]) {
+                tagColorCache[tag] = getRandomColor();
+            }
+            return tagColorCache[tag];
+        }
+
+        window.toggleTagSelection = function(tag) {
+            const index = selectedTags.indexOf(tag);
+            if (index > -1) {
+                selectedTags.splice(index, 1);
+            } else {
+                selectedTags.push(tag);
+            }
+            renderTags();
+            renderDishList();
+        }
+
+        function setupTagInput() {
+            const tagInput = document.getElementById('dishTags');
+            const suggestionsContainer = document.getElementById('tagSuggestions');
+
+            tagInput.addEventListener('input', () => {
+                const value = tagInput.value;
+                const currentTags = value.split(',').map(t => t.trim());
+                const lastTag = currentTags[currentTags.length - 1].toLowerCase();
+                suggestionsContainer.innerHTML = '';
+
+                if (lastTag) {
+                    const suggestions = allTags.filter(t => t.toLowerCase().includes(lastTag) && !currentTags.includes(t));
+                    if (suggestions.length > 0) {
+                        suggestions.forEach(suggestion => {
+                            const div = document.createElement('div');
+                            div.textContent = suggestion;
+                            div.onclick = () => {
+                                currentTags[currentTags.length - 1] = suggestion;
+                                tagInput.value = currentTags.join(', ') + ', ';
+                                suggestionsContainer.style.display = 'none';
+                                tagInput.focus();
+                            };
+                            suggestionsContainer.appendChild(div);
+                        });
+                        suggestionsContainer.style.display = 'block';
+                    } else {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                } else {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (e.target !== tagInput) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
 
         window.addIngredientRow = function() {
             currentIngredients.push({ name: '', quantity: '', unit: 'кг' });
@@ -232,6 +349,9 @@
         window.saveDish = async function() {
             const name = document.getElementById('dishName').value.trim();
             const totalPrice = parseFloat(document.getElementById('dishTotalPrice').value) || 0;
+            const tagsRaw = document.getElementById('dishTags').value.trim();
+            const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+
             // Перетворюємо кількість у число, ігноруємо порожні інгредієнти
             const ingredientsArr = currentIngredients
                 .map(ing => ({
@@ -252,12 +372,13 @@
 
                 if (editingIndex !== null && !window.saveAsNew) {
                     const dishId = dishesDocs[editingIndex];
-                    await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr, totalPrice });
+                    await setDoc(doc(db, "dishes", dishId), { name, ingredients: ingredientsArr, totalPrice, tags });
                 } else {
-                    await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr, totalPrice });
+                    await addDoc(collection(db, "dishes"), { name, ingredients: ingredientsArr, totalPrice, tags });
                 }
             document.getElementById('dishName').value = '';
             document.getElementById('dishTotalPrice').value = '';
+            document.getElementById('dishTags').value = '';
             currentIngredients = [];
             renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
@@ -270,6 +391,7 @@
             const dish = dishes[index];
             document.getElementById('dishName').value = dish.name;
             document.getElementById('dishTotalPrice').value = dish.totalPrice || '';
+            document.getElementById('dishTags').value = dish.tags ? dish.tags.join(', ') : '';
             currentIngredients = dish.ingredients.map(ing => ({
                 name: ing.name,
                 quantity: ing.quantity,
@@ -284,6 +406,7 @@
         window.cancelEdit = function() {
             document.getElementById('dishName').value = '';
             document.getElementById('dishTotalPrice').value = '';
+            document.getElementById('dishTags').value = '';
             currentIngredients = [];
             renderIngredientInputs();
             document.getElementById('cancelEditBtn').style.display = 'none';
@@ -305,12 +428,26 @@
             dishList.innerHTML = '';
             const sortedDishes = [...dishes].sort((a, b) => a.name.localeCompare(b.name));
             const searchQuery = document.getElementById('dishSearch').value.toLowerCase();
+
             const filteredDishes = sortedDishes.filter(dish => {
+                // Фільтрація за тегами
+                if (selectedTags.length > 0) {
+                    if (!dish.tags || !selectedTags.every(tag => dish.tags.includes(tag))) {
+                        return false;
+                    }
+                }
+
+                // Фільтрація за пошуковим запитом
                 const query = searchQuery.toLowerCase();
-                return dish.name.toLowerCase().includes(query) ||
-                       dish.ingredients.some(ing => ing.name.toLowerCase().includes(query)) ||
-                       (dish.totalPrice && dish.totalPrice.toString().includes(query));
+                if (query) {
+                    return dish.name.toLowerCase().includes(query) ||
+                           (dish.tags && dish.tags.some(tag => tag.toLowerCase().includes(query))) ||
+                           dish.ingredients.some(ing => ing.name.toLowerCase().includes(query)) ||
+                           (dish.totalPrice && dish.totalPrice.toString().includes(query));
+                }
+                return true; // Якщо немає пошукового запиту, повертаємо true
             });
+
             filteredDishes.forEach((dish, index) => {
                         window.showVariations = function(index) {
                             const dish = dishes[index];
@@ -442,7 +579,12 @@
         </div>
     </div>
     <div class="dish-details">
-        <ul style="margin:0 0 0 15px; padding:0;">
+         ${dish.tags && dish.tags.length > 0 ? `
+            <div class="dish-tags">
+                ${dish.tags.map(tag => `<span class="dish-tag" style="background-color: ${getTagColor(tag)}">${tag}</span>`).join('')}
+            </div>
+        ` : ''}
+        <ul style="margin:10px 0 0 15px; padding:0;">
             ${dish.ingredients.map(ing => `<li>${ing.name} — ${ing.quantity} ${ing.unit ? ing.unit : 'кг'}</li>`).join('')}
         </ul>
         <div class="variation-list" id="variationList-${realIndex}" style="margin-top:10px;"></div>
@@ -476,7 +618,7 @@
                                                 unit: ing.unit || 'кг'
                                             }))
                                             .filter(ing => ing.name && ing.quantity > 0);
-                                        // Автоматичне підтягування інгредієнта з бази
+                                        // Автоматичне підтягування інгредієнтів з бази
                                         const allExist = ingredientsArr.every(ing => ingredients.some(i => i.name === ing.name));
                                         if (!name || !Array.isArray(ingredientsArr) || ingredientsArr.length === 0 || !allExist) {
                                             document.getElementById('dishError').textContent = 'Введіть назву і хоча б один існуючий інгредієнт!';
@@ -554,6 +696,7 @@
         window.onload = function() {
             document.getElementById('dishSearch').addEventListener('input', renderDishList);
                 document.getElementById('saveAsNewBtn').style.display = 'none';
+            setupTagInput();
         };
     </script>
 </head>
@@ -581,6 +724,10 @@
             <div class="dish-form">
                 <input type="text" id="dishName" placeholder="Назва страви">
                 <input type="number" id="dishTotalPrice" placeholder="Орієнтовна вартість страви (грн)" min="0" step="0.01">
+                <div id="tagInputContainer">
+                    <input type="text" id="dishTags" placeholder="Теги через кому" style="width: 95%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                    <div id="tagSuggestions" style="display: none;"></div>
+                </div>
                 <div id="ingredientInputs"></div>
                 <button type="button" onclick="addIngredientRow()">Додати інгредієнт</button>
                 <button onclick="saveDish()" id="saveDishBtn">Зберегти страву</button>
@@ -592,6 +739,9 @@
                 </div>
             </div>
             <p id="dishError" class="error">Введіть назву і хоча б один існуючий інгредієнт!</p>
+        </div>
+        <div id="tagContainer" class="tag-container" class="section">
+            <h2>Теги</h2>
         </div>
         <div class="section">
             <h2>Усі страви</h2>
