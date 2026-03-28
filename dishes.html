@@ -67,6 +67,24 @@
             margin-right: 5px;
             color: white;
         }
+
+        .tag-btn {
+            border: none;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            filter: brightness(0.8); /* Робимо невибрані теги тьмянішими */
+        }
+        .tag-btn.selected {
+            filter: brightness(1.1); /* Робимо вибрані теги яскравішими */
+            font-weight: bold;
+        }
+        #tagInputContainer {
+            margin-bottom: 10px;
+        }
     </style>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
