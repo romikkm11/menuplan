@@ -479,7 +479,10 @@
                 return true; // Якщо немає пошукового запиту, повертаємо true
             });
 
-            filteredDishes.forEach((dish, index) => {
+            filteredDishes.forEach((dish) => {
+                const realIndex = dishes.findIndex(d => d.name === dish.name);
+                if (realIndex === -1) return; // Skip if not found in original array
+
                         window.showVariations = function(index) {
                             const dish = dishes[index];
                             const listDiv = document.getElementById('variationList-' + index);
@@ -591,7 +594,6 @@
                             detailsDiv.innerHTML = html;
                             detailsDiv.style.display = 'block';
                         };
-                const realIndex = dishes.findIndex(i => i.name === dish.name);
                 const item = document.createElement('div');
                 item.className = 'dish-item';
                 item.innerHTML = `
