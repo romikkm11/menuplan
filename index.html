@@ -399,7 +399,14 @@
 
         function getDishBaseQty(dish) {
             if (!dish || !Array.isArray(dish.ingredients)) return 0;
-            return dish.ingredients.reduce((s, ing) => s + (Number(ing.quantity) || 0), 0);
+            return dish.ingredients.reduce((s, ing) => {
+                let qty = Number(ing.quantity) || 0;
+                if (ing.unit === 'кг') qty *= 1000;
+                else if (ing.unit === 'г') qty *= 1;
+                else if (ing.unit === 'мг') qty /= 1000;
+                // Для "шт" і "л" залишаємо як є, або можна додати додаткову логіку
+                return s + qty;
+            }, 0) / 1000; // повертаємо у кілограмах (0.2 = 200 г)
         }
 
         function createDishSelect(dayIdx, meal) {
