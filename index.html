@@ -437,10 +437,21 @@
                         e.stopPropagation();
                         openPopup(function(newDish) {
                             if (!newDish) return;
-                            let newEntry, dishObj;
+                            let newEntry, dishObj, variationObj = null;
                             if (typeof newDish === 'object' && newDish.name) {
-                                dishObj = dishes.find(d => d.name === newDish.name);
-                                const base = getDishBaseQty(dishObj);
+                                // Перевіряємо, чи це варіація (має вигляд "Назва (примітка)")
+                                const varMatch = newDish.name.match(/^(.+?) \((.+)\)$/);
+                                if (varMatch) {
+                                    const baseName = varMatch[1];
+                                    const note = varMatch[2];
+                                    dishObj = dishes.find(d => d.name === baseName);
+                                    if (dishObj && dishObj.variations) {
+                                        variationObj = dishObj.variations.find(v => (v.note || 'варіація') === note);
+                                    }
+                                } else {
+                                    dishObj = dishes.find(d => d.name === newDish.name);
+                                }
+                                const base = variationObj ? getDishBaseQty(variationObj) : getDishBaseQty(dishObj);
                                 newEntry = { name: newDish.name, weight: base > 0 ? base : 0.1 };
                             } else {
                                 dishObj = dishes.find(d => d.name === newDish);
