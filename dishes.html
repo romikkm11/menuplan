@@ -517,13 +517,13 @@
     </div>
                 `;
                 dishList.appendChild(item);
-
+                // Відображення варіацій
                 const listDiv = item.querySelector(`#variationList-${realIndex}`);
                 if (dish.variations && dish.variations.length > 0) {
                     let html = '<div style="font-weight:bold;margin-bottom:4px;">Варіації:</div><ul style="list-style:none;padding:0;">';
                     dish.variations.forEach((v, vIdx) => {
                         html += `<li style="margin-bottom:8px;">
-                            <button class="action-btn" onclick="toggleVariationDetails(${realIndex},${vIdx});" style="background-color:#fff;color:#333;border:1px solid #ccc;">${v.note || 'Без примітки'}</button>
+                            <button class="action-btn" onclick="toggleVariationDetails(${realIndex},${vIdx}); event.stopPropagation();" style="background-color:#fff;color:#333;border:1px solid #ccc;">${v.note || 'Без примітки'}</button>
                             <div class="variation-details" id="variationDetails-${realIndex}-${vIdx}" style="display:none;margin-top:6px;padding-left:10px;border-left:2px solid #eee;"></div>
                         </li>`;
                     });
