@@ -278,6 +278,41 @@
             <input type="text" id="ingredientSearch" placeholder="Пошук інгредієнтів..." style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
             <div id="ingredientList" class="ingredient-list"></div>
     </div>
+<script>
+(function(){
+  const key = 'autosave:' + location.pathname;
+  function saveAll(){
+    try{
+      const state={ts:Date.now(), inputs:{}};
+      document.querySelectorAll('input,textarea,select').forEach(el=>{
+        if(el.type==='password') return;
+        const id = el.id || el.name || (el.getAttribute('data-autosave-id') || null);
+        if(!id) return;
+        state.inputs[id] = {value: el.value, checked: el.checked, type: el.type, name: el.name};
+      });
+      localStorage.setItem(key, JSON.stringify(state));
+    }catch(e){}
+  }
+  function restore(){
+    try{
+      const s = JSON.parse(localStorage.getItem(key) || 'null');
+      if(!s) return;
+      if(s.inputs){
+        Object.keys(s.inputs).forEach(k=>{
+          const v = s.inputs[k];
+          const el = document.getElementById(k) || document.querySelector('[name="'+(v.name||'')+'"]');
+          if(!el) return;
+          if(el.type==='checkbox' || el.type==='radio') el.checked = !!v.checked; else el.value = v.value;
+        });
+      }
+    }catch(e){}
+  }
+  window.addEventListener('beforeunload', saveAll);
+  document.addEventListener('input', ()=>saveAll(), true);
+  setInterval(saveAll, 2000);
+  restore();
+})();
+</script>
 </body>
 </html>
 <!-- ...existing code... -->

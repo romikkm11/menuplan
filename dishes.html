@@ -730,5 +730,44 @@
             <div id="dishList" class="dish-list"></div>
         </div>
     </div>
+<script>
+(function(){
+  const key = 'autosave:' + location.pathname;
+  function saveAll(){
+    try{
+      const state={ts:Date.now(), inputs:{}};
+      document.querySelectorAll('input,textarea,select').forEach(el=>{
+        if(el.type==='password') return;
+        const id = el.id || el.name || (el.getAttribute('data-autosave-id') || null);
+        if(!id) return;
+        state.inputs[id] = {value: el.value, checked: el.checked, type: el.type, name: el.name};
+      });
+      if(window.currentIngredients!==undefined) state.currentIngredients = window.currentIngredients;
+      if(window.editingIndex!==undefined) state.editingIndex = window.editingIndex;
+      localStorage.setItem(key, JSON.stringify(state));
+    }catch(e){}
+  }
+  function restore(){
+    try{
+      const s = JSON.parse(localStorage.getItem(key) || 'null');
+      if(!s) return;
+      if(s.inputs){
+        Object.keys(s.inputs).forEach(k=>{
+          const v = s.inputs[k];
+          const el = document.getElementById(k) || document.querySelector('[name="'+(v.name||'')+'"]');
+          if(!el) return;
+          if(el.type==='checkbox' || el.type==='radio') el.checked = !!v.checked; else el.value = v.value;
+        });
+      }
+      if(s.currentIngredients && window.currentIngredients!==undefined){ window.currentIngredients = s.currentIngredients; if(typeof renderIngredientInputs==='function') renderIngredientInputs(); }
+      if(s.editingIndex!==undefined && window.editingIndex!==undefined) window.editingIndex = s.editingIndex;
+    }catch(e){}
+  }
+  window.addEventListener('beforeunload', saveAll);
+  document.addEventListener('input', ()=>saveAll(), true);
+  setInterval(saveAll, 2000);
+  restore();
+})();
+</script>
 </body>
 </html>
